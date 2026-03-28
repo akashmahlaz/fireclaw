@@ -1,142 +1,205 @@
-# 🔥 FireClaw — The Plan
+# 🔥 FireClaw — The Plan (Research-Backed v2)
 
 ## What Is FireClaw?
 
-**One-click deploy your personal AI assistant.**
+~~One-click deploy your personal AI assistant.~~ ← Hostinger already does this at $5.99/mo.
 
-FireClaw is a managed platform that lets anyone deploy their own OpenClaw AI agent in under 2 minutes. WhatsApp-first, always-on, fully isolated.
+**FireClaw is the multi-agent management platform for OpenClaw.**
 
-Think: **Hostinger for AI agents.**
+Deploy, manage, and monitor multiple AI agents from one dashboard. Built for agencies, teams, and power users who need more than a single agent.
+
+Think: **Vercel for AI agents** — not another Hostinger.
+
+---
+
+## Why Not Just Use Hostinger?
+
+Hostinger offers 1-click OpenClaw at **$5.99/mo** with 100K+ agents deployed. They win on:
+- Price ($5.99 vs anything we could charge for single agent)
+- Brand trust (4M+ users)
+- Infrastructure (global data centers)
+
+**But Hostinger can't do:**
+- ❌ Manage 10 agents from one dashboard
+- ❌ White-label agents for your clients
+- ❌ Pre-built agent templates (sales bot, support bot)
+- ❌ Cross-agent analytics
+- ❌ Agency billing (charge your clients through your dashboard)
+- ❌ Agent marketplace / skill store
+- ❌ India-first pricing in ₹
+
+**FireClaw's wedge: Multi-agent management, agency tools, and templates.**
 
 ---
 
 ## The Pitch (30 seconds)
 
-> "Want an AI assistant on WhatsApp that remembers everything, runs 24/7, and is 100% yours? Click deploy, scan a QR code, and it's live. $29/month."
+> "Managing AI agents for your clients? Deploy 10 OpenClaw agents in 5 minutes, manage them all from one dashboard, white-label them, and charge your clients — starting at ₹1,999/month."
 
 ---
 
-## How It Works (User Flow)
+## Revenue Model (Research-Backed)
 
-```
-1. User visits fireclaw.ai
-2. Signs up (email or Google)
-3. Clicks "Deploy New Agent"
-4. Picks a plan (Starter $29 / Pro $79 / Agency $149)
-5. Enters: Agent name, WhatsApp number
-6. Pays (Stripe/Razorpay)
-7. We auto-provision an EC2 instance in ~90 seconds
-8. User gets a dashboard URL + QR code
-9. Scans QR → WhatsApp connected
-10. Done. AI agent is live.
-```
+### Pricing (India-First)
 
----
+| Plan | Agents | Price/mo | Infra Cost | Margin |
+|------|--------|----------|------------|--------|
+| **Personal** | 1 | ₹499 (~$6) | ~$8 (shared) | ~25% |
+| **Business** | 3 | ₹1,999 (~$24) | ~$20 (shared) | ~17% |
+| **Agency** | 10 | ₹4,999 (~$60) | ~$50 (shared) | ~17% |
+| **Enterprise** | Unlimited | Custom | Custom | 30%+ |
 
-## Revenue Model
+**Why these prices work:**
+- Personal at ₹499 matches Hostinger's $5.99 in value
+- Business/Agency have NO equivalent competitor (Hostinger = 1 agent/plan)
+- Margins improve with density (more agents per server)
 
-| Plan | Server | Our Cost | Price | Margin |
-|------|--------|----------|-------|--------|
-| Starter | t3.micro (1 vCPU, 1GB) | ~$8/mo | $29/mo | 72% |
-| Pro | t3.medium (2 vCPU, 4GB) | ~$33/mo | $79/mo | 58% |
-| Agency | t3.large (2 vCPU, 8GB) | ~$65/mo | $149/mo | 56% |
+### Infrastructure Strategy (NOT 1 EC2 per agent)
 
-**AI costs:** Users bring their own API key (OpenAI/Anthropic/GitHub Copilot) — or we offer a bundled plan with usage-based AI ($0.01/message).
+Instead of dedicated instances, use **shared containerized infrastructure:**
 
-**100 clients on Starter = $2,900/mo revenue, $2,100 gross profit.**
+| Server | Type | Cost/mo | Agents Hosted | Cost/Agent |
+|--------|------|---------|---------------|------------|
+| Shared | t3.xlarge (4 vCPU, 16 GB) | ~$122 | 10-15 | $8-12 |
+| Shared | t3.2xlarge (8 vCPU, 32 GB) | ~$244 | 25-30 | $8-10 |
+| Dedicated | t3.micro (for personal) | ~$11 | 1 | $11 |
 
----
+*With 1yr Reserved Instances: costs drop 35-40%.*
 
-## Target Customers
+### Add-On Revenue
+| Add-On | Price |
+|--------|-------|
+| Extra agent | ₹299/mo |
+| WhatsApp messages (over 1000/mo) | ₹1/message |
+| Premium templates | ₹499-999 one-time |
+| White-label branding | Included in Agency+ |
+| Bundled AI credits (no BYOK needed) | ₹499/mo for 10K messages |
 
-### Phase 1 — Founders & Solopreneurs
-- Want a personal AI assistant on WhatsApp
-- Don't know how to self-host
-- Will pay $29-79/mo for convenience
+### Revenue Projections
 
-### Phase 2 — Agencies & SMBs
-- Want AI agents for each client
-- Customer support bots, lead gen bots
-- Deploy + manage multiple agents from one dashboard
-
-### Phase 3 — Enterprises
-- Dedicated instances, SLAs
-- Custom domains, branding
-- White-label option
+| Milestone | Users | MRR | ARR |
+|-----------|-------|-----|-----|
+| Month 3 | 60 | ₹75K (~$900) | ~$10.8K |
+| Month 6 | 250 | ₹300K (~$3.6K) | ~$43K |
+| Month 12 | 700 | ₹1M (~$12K) | ~$144K |
+| Month 24 | 3,000 | ₹5M (~$60K) | ~$720K |
 
 ---
 
-## Competitive Landscape
+## Target Customers (Revised)
 
-| Competitor | What They Do | Gap |
-|-----------|--------------|-----|
-| Hostinger | 1-click WordPress hosting | No AI agents |
-| Railway/Render | Deploy any app | Not AI-specific, complex |
-| DigitalOcean App Platform | 1-click apps | No OpenClaw, no WhatsApp |
-| Twilio | Communication APIs | Build-it-yourself |
-| OpenClaw (self-hosted) | The AI agent itself | Requires technical setup |
+### Phase 1 — Indian Agencies & Freelancers (Month 1-3)
+- Digital marketing agencies deploying chatbots for clients
+- Freelance developers offering "AI assistant" as a service
+- **Why they pay:** Managing 5-10 client agents from one place saves hours/week
 
-**FireClaw's wedge:** We make OpenClaw deployment as easy as creating a Gmail account.
+### Phase 2 — SMBs & Startups (Month 3-6)
+- Small businesses wanting AI for support/sales
+- Startups that need AI agents across departments
+- **Why they pay:** Templates get them started in minutes, not days
 
----
-
-## Phases
-
-### Phase 1: MVP (2-3 weeks)
-- Landing page with waitlist + early access
-- Manual-ish provisioning (automated script, human review)
-- 10-20 beta users
-- Prove willingness to pay
-
-### Phase 2: Full Automation (2-3 weeks)
-- Auto-provisioning API (EC2 + setup script + DNS)
-- Self-service dashboard (deploy, manage, monitor)
-- Stripe billing integration
-- WhatsApp QR linking in dashboard
-
-### Phase 3: Scale (ongoing)
-- Multi-region (Mumbai, Singapore, US-East, EU)
-- Agent templates (job apply bot, support bot, research bot)
-- White-label for agencies
-- Mobile app for managing agents
-- Marketplace for skills/plugins
+### Phase 3 — Global Agencies (Month 6+)
+- International agencies managing AI fleets
+- White-label resellers
+- **Why they pay:** White-label + client billing = new revenue stream for them
 
 ---
 
-## Tech Stack
+## Competitive Landscape (Research-Backed)
+
+| Competitor | What | Price | Gap |
+|-----------|------|-------|-----|
+| **Hostinger OpenClaw** | 1-click single agent | $5.99/mo | No multi-agent, no agency tools |
+| **Dante AI** | AI chatbots | $40-400/mo | Chatbot only, not full agent, expensive |
+| **Botpress** | Chatbot builder | $0-495/mo | Visual builder, not OpenClaw, no WhatsApp focus |
+| **Chatfuel** | WhatsApp/IG bots | $69/mo | Simple bots, not AI agents |
+| **Tidio** | Customer service AI | $24-749/mo | Support-focused, not general agents |
+| **ManyChat** | Marketing automation | $15-100/mo | Flow-based, not AI agents |
+| **Railway/Render** | Generic PaaS | $5-85/mo | Not AI-specific, complex |
+
+**FireClaw's unique position:** Only platform for managing multiple OpenClaw agents with agency tools.
+
+---
+
+## Phases (Revised)
+
+### Phase 1: MVP — Agency Dashboard (3 weeks)
+- Landing page targeting Indian agencies
+- Multi-agent deploy from one dashboard
+- 3 pre-built templates (sales bot, support bot, personal assistant)
+- Stripe + Razorpay billing
+- 10-20 beta agencies
+- **Goal:** Prove agencies will pay for multi-agent management
+
+### Phase 2: Templates & Marketplace (3 weeks)
+- 10+ agent templates
+- Skill marketplace (install skills per agent)
+- White-label setup
+- Client billing (agencies charge their clients through us)
+- **Goal:** 100 paying users
+
+### Phase 3: Scale (Ongoing)
+- Multi-region (Mumbai, Singapore, US-East)
+- Agent analytics dashboard
+- Mobile app for monitoring
+- API for programmatic agent management
+- Community template submissions
+- **Goal:** ₹1M MRR
+
+---
+
+## Tech Stack (Revised)
 
 ### Frontend (fireclaw.ai)
 - Next.js 16 + TypeScript
 - Tailwind CSS + shadcn/ui
-- Stripe for payments
-- Better-Auth for authentication
+- Stripe + Razorpay for payments
+- authjs for authentication 
 
 ### Backend (Provisioning Engine)
-- Node.js API routes
-- AWS SDK v3 (EC2, Route53, IAM)
-- MongoDB (user data, instance tracking)
-- Bull/BullMQ (job queue for provisioning)
+- Node.js API
+- **Docker + Docker Compose** (not bare EC2 per agent)
+- AWS SDK v3 (EC2 for host servers, not per agent)
+- MongoDB Atlas (user data, agent registry)
+- Bull/BullMQ (provisioning queue)
 
-### Per-Client Instance
-- Ubuntu 22.04 on EC2
-- Node.js 22 + OpenClaw (npm)
-- Caddy (reverse proxy + auto HTTPS)
-- Systemd (auto-restart)
+### Agent Infrastructure
+- **Shared host servers** running Docker
+- Each agent = isolated Docker container with OpenClaw
+- Caddy reverse proxy (routing subdomains to containers)
+- Automated health checks + restart
+- Central logging (agent metrics → dashboard)
 
-### Infrastructure
-- AWS EC2 (client instances)
-- Vercel (fireclaw.ai dashboard)
-- MongoDB Atlas (SaaS database)
-- Cloudflare or Route53 (DNS + subdomains)
-- Stripe (billing)
+### Why Docker Over Bare EC2
+| Approach | Cost for 10 agents | Management |
+|----------|-------------------|------------|
+| 10x t3.micro | ~$106/mo | 10 servers to manage |
+| 1x t3.xlarge + Docker | ~$125/mo | 1 server, 10 containers |
+| 2x t3.large + Docker | ~$132/mo | 2 servers, 5 containers each (HA) |
+
+Docker is similar cost but dramatically simpler to manage and scale.
 
 ---
 
-## Key Metrics to Track
+## Key Risks & Mitigations
 
-- **Provisioning time** — target: <90 seconds
-- **Uptime per instance** — target: 99.5%+
+| Risk | Mitigation |
+|------|-----------|
+| Hostinger drops price or adds multi-agent | Move fast, build community moat |
+| OpenClaw changes licensing | We contribute upstream, stay aligned |
+| Low margins on Personal plan | Personal is acquisition funnel → upsell to Business/Agency |
+| Container density limits | Auto-scale to new host servers |
+| India market slow to adopt | Parallel global launch at USD pricing |
+
+---
+
+## Key Metrics
+
+- **Agents deployed** — total across all users
+- **Agents per user** — avg (target: 2.5+)
 - **MRR** — monthly recurring revenue
-- **Churn** — % users who cancel per month
-- **CAC** — cost to acquire one customer
-- **LTV** — lifetime value per customer
+- **Provisioning time** — target: <60 seconds
+- **Uptime per agent** — target: 99.5%+
+- **Churn** — target: <5%/month
+- **CAC** — cost to acquire (target: <₹500)
+- **LTV** — lifetime value (target: >₹15,000)
