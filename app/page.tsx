@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
+import SignIn from "@/components/auth/sign-in";
 
 export default function Home() {
   return (
@@ -22,7 +23,9 @@ export default function Home() {
         duration={5}
         repeatDelay={0.8}
         className="text-foreground/20"
+
       />
+      <SignIn/>
 
       <BlurFade
         inView

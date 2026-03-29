@@ -35,3 +35,18 @@ if (process.env.NODE_ENV === "development") {
 // Export a module-scoped MongoClient. By doing this in a
 // separate module, the client can be shared across functions.
 export default client
+
+// Export a connected client promise for NextAuth
+let clientPromise: Promise<MongoClient>
+if (process.env.NODE_ENV === "development") {
+  let globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>
+  }
+  if (!globalWithMongo._mongoClientPromise) {
+    globalWithMongo._mongoClientPromise = client.connect().then(() => client)
+  }
+  clientPromise = globalWithMongo._mongoClientPromise
+} else {
+  clientPromise = client.connect().then(() => client)
+}
+export { clientPromise }
