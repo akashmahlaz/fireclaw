@@ -48,18 +48,18 @@ export function AnimatedGridPattern({
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [squares, setSquares] = useState<Array<Square>>([])
 
-  const getPos = useCallback((canvasWidth: number, canvasHeight: number): [number, number] => {
+  const getPos = useCallback((): [number, number] => {
     return [
-      Math.floor((Math.random() * canvasWidth) / width),
-      Math.floor((Math.random() * canvasHeight) / height),
+      Math.floor((Math.random() * dimensions.width) / width),
+      Math.floor((Math.random() * dimensions.height) / height),
     ]
-  }, [height, width])
+  }, [dimensions.height, dimensions.width, height, width])
 
   const generateSquares = useCallback(
-    (count: number, canvasWidth: number, canvasHeight: number) => {
+    (count: number) => {
       return Array.from({ length: count }, (_, i) => ({
         id: i,
-        pos: getPos(canvasWidth, canvasHeight),
+        pos: getPos(),
         iteration: 0,
       }))
     },
@@ -75,15 +75,21 @@ export function AnimatedGridPattern({
         const nextSquares = currentSquares.slice()
         nextSquares[squareId] = {
           ...current,
-          pos: getPos(dimensions.width, dimensions.height),
+          pos: getPos(),
           iteration: current.iteration + 1,
         }
 
         return nextSquares
       })
     },
-    [dimensions.height, dimensions.width, getPos]
+    [getPos]
   )
+
+  useEffect(() => {
+    if (dimensions.width && dimensions.height) {
+      setSquares(generateSquares(numSquares))
+    }
+  }, [dimensions.width, dimensions.height, generateSquares, numSquares])
 
   useEffect(() => {
     const element = containerRef.current
@@ -101,11 +107,6 @@ export function AnimatedGridPattern({
             ) {
               return currentDimensions
             }
-
-            if (nextWidth > 0 && nextHeight > 0) {
-              setSquares(generateSquares(numSquares, nextWidth, nextHeight))
-            }
-
             return { width: nextWidth, height: nextHeight }
           })
         }
@@ -119,7 +120,7 @@ export function AnimatedGridPattern({
         resizeObserver.disconnect()
       }
     }
-  }, [generateSquares, numSquares])
+  }, [])
 
   return (
     <svg
