@@ -1,4 +1,4 @@
-import { Bot, Activity, MessageSquare, Globe, ArrowLeft } from "lucide-react";
+import { Bot, Activity, MessageSquare, Globe, ArrowLeft, ExternalLink, Key, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { getAgentById } from "@/lib/agents";
+import { getControlUiUrl } from "@/lib/provision";
 import { notFound } from "next/navigation";
+import { AgentActions } from "./agent-actions";
 
 export default async function AgentDetailPage({
   params,
@@ -86,11 +88,62 @@ export default async function AgentDetailPage({
         </Card>
       </div>
 
+      {/* OpenClaw Access Card */}
+      {agent.status === "provisioning" && (
+        <Card>
+          <CardContent className="flex items-center gap-3 py-6">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            <div>
+              <p className="font-medium">Provisioning your agent...</p>
+              <p className="text-sm text-muted-foreground">
+                This usually takes 2-3 minutes. The server is being created and OpenClaw is being installed.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {agent.status === "running" && agent.serverIp && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Agent Dashboard</CardTitle>
+            <CardDescription>
+              Open the OpenClaw Control UI to connect WhatsApp, Telegram, configure AI models, and manage your agent.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Button render={<a href={getControlUiUrl(agent.serverIp)} target="_blank" rel="noopener noreferrer" />}>
+              <ExternalLink className="size-4" />
+              Open Agent Dashboard
+            </Button>
+            {agent.gatewayToken && (
+              <div className="flex items-center gap-2 rounded-md bg-muted p-3">
+                <Key className="size-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Gateway Token (use to log in)</p>
+                  <p className="font-mono text-xs break-all">{agent.gatewayToken}</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {agent.status === "error" && (
+        <Card>
+          <CardContent className="py-6">
+            <p className="text-sm text-destructive">
+              Something went wrong during provisioning. Try deleting this agent and creating a new one.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Channels</CardTitle>
           <CardDescription>
-            Connect your agent to messaging platforms.
+            Connect your agent to messaging platforms via the Agent Dashboard above.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -101,12 +154,14 @@ export default async function AgentDetailPage({
               </div>
               <div>
                 <p className="text-sm font-medium">WhatsApp</p>
-                <p className="text-xs text-muted-foreground">Not connected</p>
+                <p className="text-xs text-muted-foreground">
+                  {agent.channels.whatsapp ? "Connected" : "Connect via Agent Dashboard → Channels → Show QR"}
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              Connect
-            </Button>
+            <Badge variant={agent.channels.whatsapp ? "default" : "outline"}>
+              {agent.channels.whatsapp ? "Connected" : "Not connected"}
+            </Badge>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
@@ -116,12 +171,14 @@ export default async function AgentDetailPage({
               </div>
               <div>
                 <p className="text-sm font-medium">Telegram</p>
-                <p className="text-xs text-muted-foreground">Not connected</p>
+                <p className="text-xs text-muted-foreground">
+                  {agent.channels.telegram ? "Connected" : "Connect via Agent Dashboard → Channels"}
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              Connect
-            </Button>
+            <Badge variant={agent.channels.telegram ? "default" : "outline"}>
+              {agent.channels.telegram ? "Connected" : "Not connected"}
+            </Badge>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
@@ -131,20 +188,19 @@ export default async function AgentDetailPage({
               </div>
               <div>
                 <p className="text-sm font-medium">Web Chat</p>
-                <p className="text-xs text-muted-foreground">Not connected</p>
+                <p className="text-xs text-muted-foreground">
+                  {agent.channels.webchat ? "Embedded" : "Set up via Agent Dashboard"}
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              Embed
-            </Button>
+            <Badge variant={agent.channels.webchat ? "default" : "outline"}>
+              {agent.channels.webchat ? "Active" : "Not set up"}
+            </Badge>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button variant="outline">Restart Agent</Button>
-        <Button variant="destructive">Stop Agent</Button>
-      </div>
+      <AgentActions agentId={agent._id!.toString()} status={agent.status} />
     </div>
   );
 }

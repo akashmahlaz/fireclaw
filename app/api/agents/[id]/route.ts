@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { getAgentById, updateAgent, deleteAgent } from "@/lib/agents";
+import { destroyAgent, rebootAgent } from "@/lib/provision";
 
 export async function GET(
   _request: Request,
@@ -31,6 +32,25 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
+
+  // Handle server actions (reboot, stop, start)
+  if (body.action) {
+    const agent = await getAgentById(id, session.user.id);
+    if (!agent) {
+      return Response.json({ error: "Agent not found" }, { status: 404 });
+    }
+    if (!agent.serverId) {
+      return Response.json({ error: "No server associated" }, { status: 400 });
+    }
+
+    if (body.action === "reboot") {
+      await rebootAgent(agent.serverId);
+      await updateAgent(id, session.user.id, { status: "running" });
+      return Response.json({ success: true });
+    }
+
+    return Response.json({ error: "Unknown action" }, { status: 400 });
+  }
 
   // Only allow specific fields to be updated
   const allowed: Record<string, boolean> = {
@@ -66,9 +86,19 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // TODO: Terminate Hetzner server before deleting
-  // const agent = await getAgentById(id, session.user.id);
-  // if (agent?.serverId) await destroyServer(agent.serverId);
+  const agent = await getAgentById(id, session.user.id);
+  if (!agent) {
+    return Response.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  // Terminate Hetzner server before deleting from DB
+  if (agent.serverId) {
+    try {
+      await destroyAgent(agent.serverId);
+    } catch (err) {
+      console.error(`Failed to destroy server ${agent.serverId}:`, err);
+    }
+  }
 
   const ok = await deleteAgent(id, session.user.id);
   if (!ok) {

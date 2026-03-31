@@ -11,6 +11,7 @@ export interface Agent {
   status: "provisioning" | "running" | "stopped" | "error";
   serverId?: string; // Hetzner server ID
   serverIp?: string;
+  gatewayToken?: string; // OpenClaw gateway auth token
   region: string;
   channels: {
     whatsapp: boolean;
@@ -62,7 +63,7 @@ export async function getAgentById(
 export async function updateAgent(
   id: string,
   userId: string,
-  update: Partial<Pick<Agent, "name" | "status" | "serverId" | "serverIp" | "channels">>
+  update: Partial<Pick<Agent, "name" | "status" | "serverId" | "serverIp" | "gatewayToken" | "channels">>
 ): Promise<boolean> {
   if (!ObjectId.isValid(id)) return false;
   const result = await agents().updateOne(

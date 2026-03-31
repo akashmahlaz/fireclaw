@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { createAgent, getAgentsByUser } from "@/lib/agents";
+import { createAgent, getAgentsByUser, updateAgent } from "@/lib/agents";
+import { provisionAgent } from "@/lib/provision";
 import { NextRequest } from "next/server";
 
 export async function GET() {
@@ -37,8 +38,22 @@ export async function POST(request: NextRequest) {
     region: region || "eu-central",
   });
 
-  // TODO: Trigger Hetzner server provisioning asynchronously
-  // await provisionServer(agent);
+  const agentId = agent._id!.toString();
+
+  // Provision VPS with OpenClaw in the background — don't block the response
+  provisionAgent({
+    agentId,
+    userId: session.user.id,
+    name: name.trim(),
+    region: region || "eu-central",
+  })
+    .then(async ({ gatewayToken }) => {
+      await updateAgent(agentId, session.user.id, { gatewayToken });
+    })
+    .catch(async (err) => {
+      console.error(`Failed to provision agent ${agentId}:`, err);
+      await updateAgent(agentId, session.user.id, { status: "error" });
+    });
 
   return Response.json(agent, { status: 201 });
 }
