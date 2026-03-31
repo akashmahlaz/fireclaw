@@ -2,6 +2,7 @@
 
 import { BlurFade } from "@/components/ui/blur-fade"
 import { OrbitingCircles } from "@/components/ui/orbiting-circles"
+import { NeonGradientCard } from "@/components/ui/neon-gradient-card"
 
 export function ChannelOrbit() {
   return (
@@ -9,7 +10,7 @@ export function ChannelOrbit() {
       <div className="mx-auto max-w-5xl px-6">
         {/* Header */}
         <BlurFade inView delay={0}>
-          <div className="mb-6 text-center">
+          <div className="mb-14 text-center">
             <p className="mb-4 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">
               Channels
             </p>
@@ -25,40 +26,46 @@ export function ChannelOrbit() {
           </div>
         </BlurFade>
 
-        {/* Orbiting circles */}
+        {/* Neon card wrapping the orbiting circles */}
         <BlurFade inView delay={0.1}>
-          <div className="relative mx-auto flex h-[500px] w-full flex-col items-center justify-center overflow-hidden sm:h-[600px]">
-            {/* Center logo */}
-            <div className="z-10 flex size-20 items-center justify-center rounded-2xl border-2 border-neutral-200 bg-white shadow-lg">
-              <span className="text-[18px] font-black tracking-[-0.04em] text-neutral-900">
-                FC
-              </span>
-            </div>
+          <NeonGradientCard
+            borderSize={2}
+            borderRadius={28}
+            neonColors={{ firstColor: "#f97316", secondColor: "#fbbf24" }}
+            className="mx-auto w-full"
+          >
+            <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden sm:h-[600px]">
+              {/* Center logo */}
+              <div className="z-10 flex size-20 items-center justify-center rounded-2xl border-2 border-neutral-200 bg-white shadow-lg">
+                <span className="text-[18px] font-black tracking-[-0.04em] text-neutral-900">
+                  FC
+                </span>
+              </div>
 
-            {/* Outer orbit — messaging channels */}
-            <OrbitingCircles iconSize={48} radius={200} speed={0.8}>
-              <ChannelIcon color="#25D366">
-                <WhatsAppIcon />
-              </ChannelIcon>
-              <ChannelIcon color="#26A5E4">
-                <TelegramIcon />
-              </ChannelIcon>
-              <ChannelIcon color="#5865F2">
-                <DiscordIcon />
-              </ChannelIcon>
-              <ChannelIcon color="#4A154B">
-                <SlackIcon />
-              </ChannelIcon>
-              <ChannelIcon color="#0088cc">
-                <SignalIcon />
-              </ChannelIcon>
-            </OrbitingCircles>
+              {/* Outer orbit — messaging channels */}
+              <OrbitingCircles iconSize={48} radius={200} speed={0.8}>
+                <ChannelIcon color="#25D366">
+                  <WhatsAppIcon />
+                </ChannelIcon>
+                <ChannelIcon color="#26A5E4">
+                  <TelegramIcon />
+                </ChannelIcon>
+                <ChannelIcon color="#5865F2">
+                  <DiscordIcon />
+                </ChannelIcon>
+                <ChannelIcon color="#4A154B">
+                  <SlackIcon />
+                </ChannelIcon>
+                <ChannelIcon color="#0088cc">
+                  <SignalIcon />
+                </ChannelIcon>
+              </OrbitingCircles>
 
-            {/* Inner orbit — execution/AI */}
-            <OrbitingCircles iconSize={40} radius={110} reverse speed={1.2}>
-              <ChannelIcon color="#000000">
-                <OpenAIIcon />
-              </ChannelIcon>
+              {/* Inner orbit — execution/AI */}
+              <OrbitingCircles iconSize={40} radius={110} reverse speed={1.2}>
+                <ChannelIcon color="#000000">
+                  <OpenAIIcon />
+                </ChannelIcon>
               <ChannelIcon color="#FF4500">
                 <WebhookIcon />
               </ChannelIcon>
@@ -66,7 +73,8 @@ export function ChannelOrbit() {
                 <APIIcon />
               </ChannelIcon>
             </OrbitingCircles>
-          </div>
+            </div>
+          </NeonGradientCard>
         </BlurFade>
       </div>
     </section>

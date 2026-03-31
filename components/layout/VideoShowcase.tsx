@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { BlurFade } from "@/components/ui/blur-fade"
+import { Backlight } from "@/components/ui/backlight"
 
 export function VideoShowcase() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -49,18 +50,19 @@ export function VideoShowcase() {
           </div>
         </BlurFade>
 
-        {/* Video card */}
+        {/* Video card with backlight glow */}
         <BlurFade inView delay={0.1}>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.7 }}
-            className="group relative aspect-video w-full cursor-pointer overflow-hidden rounded-3xl border border-neutral-200/60 bg-neutral-950 shadow-2xl shadow-neutral-200/40"
-            onClick={togglePlay}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
+          <Backlight blur={35} className="w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.7 }}
+              className="group relative aspect-video w-full cursor-pointer overflow-hidden rounded-3xl border border-neutral-200/60 bg-neutral-950 shadow-2xl shadow-neutral-200/40"
+              onClick={togglePlay}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            >
             {/* Video element — replace src with your demo video */}
             <video
               ref={videoRef}
@@ -154,6 +156,7 @@ export function VideoShowcase() {
               )}
             </AnimatePresence>
           </motion.div>
+          </Backlight>
         </BlurFade>
       </div>
     </section>
