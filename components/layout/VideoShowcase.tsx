@@ -52,7 +52,7 @@ export function VideoShowcase() {
 
         {/* Video card with backlight glow */}
         <BlurFade inView delay={0.1}>
-          <Backlight blur={35} className="w-full">
+          <Backlight blur={50} className="w-full">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -63,6 +63,16 @@ export function VideoShowcase() {
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >
+            {/* Color plate for backlight to amplify */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                background:
+                  "linear-gradient(135deg, #f97316 0%, #fb923c 25%, #fbbf24 50%, #f59e0b 75%, #ea580c 100%)",
+                opacity: 0.6,
+              }}
+            />
             {/* Video element — replace src with your demo video */}
             <video
               ref={videoRef}
@@ -71,7 +81,7 @@ export function VideoShowcase() {
               loop
               playsInline
               preload="metadata"
-              poster="/next.svg"
+              
             />
 
             {/* Controls overlay */}
