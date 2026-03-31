@@ -60,7 +60,7 @@ export function Hero() {
               href="/dashboard"
               className="group inline-flex items-center gap-3 rounded-full bg-neutral-900 px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-neutral-900/20 transition-all duration-300 hover:bg-neutral-700 hover:shadow-neutral-900/30 active:scale-[0.97]"
             >
-              Deploy my OpenClaw
+              Deploy OpenClaw
               <span className="flex size-5 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:translate-x-0.5">
                 <ArrowRight className="size-3" />
               </span>
