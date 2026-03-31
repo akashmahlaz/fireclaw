@@ -65,7 +65,7 @@ export function VideoShowcase() {
             <video
               ref={videoRef}
               className="absolute inset-0 size-full object-cover"
-              src="/demo.mp4"
+              src="/test.mp4"
               loop
               playsInline
               preload="metadata"
