@@ -31,8 +31,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid template" }, { status: 400 });
   }
 
+  const userId = session.user.id;
+
   const agent = await createAgent({
-    userId: session.user.id,
+    userId,
     name: name.trim(),
     template,
     region: region || "eu-central",
@@ -43,16 +45,16 @@ export async function POST(request: NextRequest) {
   // Provision VPS with OpenClaw in the background — don't block the response
   provisionAgent({
     agentId,
-    userId: session.user.id,
+    userId,
     name: name.trim(),
     region: region || "eu-central",
   })
     .then(async ({ gatewayToken }) => {
-      await updateAgent(agentId, session.user.id, { gatewayToken });
+      await updateAgent(agentId, userId, { gatewayToken });
     })
     .catch(async (err) => {
       console.error(`Failed to provision agent ${agentId}:`, err);
-      await updateAgent(agentId, session.user.id, { status: "error" });
+      await updateAgent(agentId, userId, { status: "error" });
     });
 
   return Response.json(agent, { status: 201 });
