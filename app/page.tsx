@@ -7,6 +7,9 @@ import { ChannelOrbit } from "@/components/layout/ChannelOrbit";
 import { Features } from "@/components/layout/Features";
 import { Stats } from "@/components/layout/Stats";
 import { HowItWorks } from "@/components/layout/HowItWorks";
+import { Pricing } from "@/components/layout/Pricing";
+import { FAQ } from "@/components/layout/FAQ";
+import { CTA } from "@/components/layout/CTA";
 import { Footer } from "@/components/layout/Footer";
 
 export default function Home() {
@@ -21,6 +24,10 @@ export default function Home() {
       <Features />
       <Stats />
       <HowItWorks />
+      <Pricing />
+      <FAQ />
+      <CTA />
+      <Footer />
     </>
   );
 }
