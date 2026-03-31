@@ -71,7 +71,7 @@ export function VideoShowcase() {
               loop
               playsInline
               preload="metadata"
-              poster="/demo-poster.jpg"
+              poster="/next.svg"
             />
 
             {/* Controls overlay */}

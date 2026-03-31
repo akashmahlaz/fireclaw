@@ -9,11 +9,11 @@ import {
 
 export function TerminalShowcase() {
   return (
-    <section className="relative bg-white py-24 sm:py-32">
+    <section className="relative bg-white py-28 sm:py-36">
       <div className="mx-auto max-w-6xl px-6">
         {/* Header */}
         <BlurFade inView delay={0}>
-          <div className="mb-14 text-center">
+          <div className="mb-16 text-center">
             <p className="mb-4 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">
               Deploy
             </p>
@@ -22,72 +22,87 @@ export function TerminalShowcase() {
               <br />
               <span className="text-neutral-400">in one command.</span>
             </h2>
+            <p className="mx-auto mt-5 max-w-lg text-[15px] leading-relaxed text-neutral-500">
+              A single command provisions a dedicated server, configures
+              networking, deploys OpenClaw, and verifies the health — all in
+              under 60 seconds.
+            </p>
           </div>
         </BlurFade>
 
-        {/* Full-width terminal */}
+        {/* Terminal */}
         <BlurFade inView delay={0.1}>
-          <Terminal
-            className="mx-auto w-full !max-w-5xl !max-h-none rounded-2xl !border-neutral-800 !bg-neutral-950 shadow-2xl shadow-neutral-900/25"
-          >
-            <TypingAnimation className="text-green-400">
-              {"> fireclaw deploy --tier standard --region eu-central"}
+          <Terminal className="mx-auto max-w-5xl rounded-2xl border-neutral-200 bg-neutral-950 shadow-2xl shadow-neutral-900/20">
+            <TypingAnimation className="text-green-400 font-semibold mb-2">
+              {"$ fireclaw deploy --tier standard --region eu-central"}
             </TypingAnimation>
 
+            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+              <span>  [1/4] Authentication & Capacity</span>
+            </AnimatedSpan>
             <AnimatedSpan className="text-neutral-500">
-              <span>  Authenticating with Fireclaw Cloud...</span>
+              <span>  → Authenticated as akash@fireclaw.ai (workspace: default)</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-emerald-400 mb-2">
+              <span>  ✓ Capacity reserved in eu-central isolated pool</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ Authenticated as akash@fireclaw.ai</span>
+            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+              <span>  [2/4] Provisioning Infrastructure</span>
             </AnimatedSpan>
-
             <AnimatedSpan className="text-neutral-500">
-              <span>  Provisioning dedicated VPS from snapshot...</span>
+              <span>  → Booting dedicated instance from secure OS snapshot...</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-emerald-400 mb-2">
+              <span>  ✓ Dedicated VPS running (CX32 · 4 vCPU · 8 GB RAM)</span>
             </AnimatedSpan>
 
+            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+              <span>  [3/4] Security & Routing</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-neutral-500">
+              <span>  → Allocating static IPv4/IPv6 block...</span>
+            </AnimatedSpan>
             <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ VPS created — cx32 · 4 vCPU · 8 GB RAM · 160 GB NVMe</span>
+              <span>  ✓ DNS successfully propagated (akash-7x2f.fireclaw.ai)</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-emerald-400 mb-2">
+              <span>  ✓ TLS/SSL certificate issued and verified</span>
             </AnimatedSpan>
 
+            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+              <span>  [4/4] Deploying OpenClaw Core</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-neutral-500">
+              <span>  → Pulling openclaw/engine:v2.1.0 registry image...</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-neutral-500">
+              <span>  → Initializing secure Postgres vector database...</span>
+            </AnimatedSpan>
             <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ Firewall rules applied (SSH + HTTPS only)</span>
+              <span>  ✓ Gateway services booted on :18789</span>
+            </AnimatedSpan>
+            <AnimatedSpan className="text-emerald-400 mb-3">
+              <span>  ✓ Health check passed (HTTP 200 OK)</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ DNS record → akash-7x2f.fireclaw.ai</span>
+            <AnimatedSpan className="text-neutral-700">
+              <span>  ─────────────────────────────────────────────────────────────</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ SSL certificate issued via Let's Encrypt</span>
+            <AnimatedSpan className="text-white font-bold text-[15px] mt-1">
+              <span>  🚀 Your OpenClaw instance is live!</span>
             </AnimatedSpan>
-
-            <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ OpenClaw engine started on :18789</span>
-            </AnimatedSpan>
-
-            <AnimatedSpan className="text-emerald-400">
-              <span>  ✓ Health check passed (200 OK)</span>
-            </AnimatedSpan>
-
-            <AnimatedSpan className="text-neutral-600">
-              <span>  ─────────────────────────────────────────</span>
-            </AnimatedSpan>
-
-            <AnimatedSpan className="text-white font-semibold">
-              <span>  🚀 Your OpenClaw is live!</span>
-            </AnimatedSpan>
-
-            <AnimatedSpan className="text-orange-400">
+            <AnimatedSpan className="text-orange-400 font-medium mb-1">
               <span>  → https://akash-7x2f.fireclaw.ai</span>
             </AnimatedSpan>
 
             <AnimatedSpan className="text-neutral-500">
-              <span>  Deploy time: 47s · Region: eu-central · Status: healthy</span>
+              <span>  Deploy time: 47.3s · Uptime SLA: 99.99% · Status: Healthy</span>
             </AnimatedSpan>
 
-            <TypingAnimation className="text-neutral-600">
-              {"  Ready to connect channels. Run `fireclaw connect --help`"}
+            <TypingAnimation className="text-neutral-600 mt-2">
+              {"  Next step: run `fireclaw connect whatsapp`"}
             </TypingAnimation>
           </Terminal>
         </BlurFade>
