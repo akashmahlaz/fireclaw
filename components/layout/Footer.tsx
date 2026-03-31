@@ -2,27 +2,28 @@ import Link from "next/link"
 
 const footerLinks = {
   Product: [
-    { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "FAQ", href: "#faq" },
+    { label: "Features", href: "/features" },
+    { label: "Pricing", href: "/pricing" },
+    { label: "How It Works", href: "/how-it-works" },
+    { label: "Support", href: "/support-ticket" },
   ],
   Channels: [
-    { label: "WhatsApp", href: "#" },
-    { label: "Telegram", href: "#" },
-    { label: "Discord", href: "#" },
-    { label: "Slack", href: "#" },
+    { label: "WhatsApp", href: "/whatsapp-connect" },
+    { label: "Telegram", href: "/tegegram-connect" },
+    { label: "Discord", href: "discord-connect" },
+    { label: "Slack", href: "/slack-connect" },
   ],
   Company: [
-    { label: "About", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Contact", href: "#" },
-    { label: "Status", href: "#" },
+    { label: "About", href: "/about" },
+    { label: "Blog", href: "/tech-blogs" },
+    { label: "Contact", href: "/contact" },
+    { label: "Vision", href: "/vision" },
+    { label: "Team", href: "/team" },
   ],
   Legal: [
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
-    { label: "DPA", href: "#" },
+    { label: "Privacy", href: "/privacy-policy" },
+    { label: "Terms", href: "terms-and-conditions" },
+    { label: "DPA", href: "dpa" },
   ],
 }
 
