@@ -1,152 +1,129 @@
 import Link from "next/link"
-import { ArrowRight, Shield, Clock, Zap, Globe } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { BlurFade } from "@/components/ui/blur-fade"
-import { ShimmerButton } from "@/components/ui/shimmer-button"
-import { AnimatedShinyText } from "@/components/ui/animated-shiny-text"
-import { DotPattern } from "@/components/ui/dot-pattern"
-import { NumberTicker } from "@/components/ui/number-ticker"
-import { BorderBeam } from "@/components/ui/border-beam"
-import { Safari } from "@/components/ui/safari"
-import { Button } from "@/components/ui/button"
+import { DeployTerminal } from "@/components/layout/DeployTerminal"
+
+const channelLogos = [
+  { name: "WhatsApp", color: "#25D366", letter: "W" },
+  { name: "Telegram", color: "#26A5E4", letter: "T" },
+  { name: "Discord",  color: "#5865F2", letter: "D" },
+  { name: "Slack",    color: "#4A154B", letter: "S" },
+  { name: "Signal",   color: "#3A76F0", letter: "Si" },
+  { name: "iMessage", color: "#34C759", letter: "iM" },
+]
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-[92vh] w-full flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16">
-      {/* Subtle dot background with radial mask */}
-      <DotPattern className="absolute inset-0 text-foreground/4 mask-[radial-gradient(700px_circle_at_center,white,transparent)]" />
+    <section className="relative flex min-h-[92vh] w-full flex-col items-center justify-center overflow-hidden bg-white px-6 pt-20 pb-16">
+      {/* Faint radial glow — barely visible, purely warm */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[40%] h-125 w-175 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, #fed7aa 0%, #fef3c7 40%, transparent 70%)",
+          filter: "blur(80px)",
+        }}
+      />
 
       <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 text-center">
-        {/* Announcement badge */}
+        {/* Badge */}
         <BlurFade inView delay={0}>
-          <div className="group inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-4 py-1.5 text-sm backdrop-blur-sm transition-all hover:border-border hover:bg-muted">
-            <AnimatedShinyText className="inline-flex items-center gap-2">
-              <span className="size-1.5 animate-pulse rounded-full bg-green-500" />
-              Now in Early Access — Deploy your OpenClaw today
-              <ArrowRight className="ml-1 size-3 transition-transform group-hover:translate-x-0.5" />
-            </AnimatedShinyText>
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-1.5 shadow-sm">
+            <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+            <span className="text-[12px] font-semibold tracking-wide text-neutral-600">
+              Early Access — Limited spots available
+            </span>
           </div>
         </BlurFade>
 
-        {/* Heading */}
-        <BlurFade inView delay={0.1}>
-          <h1 className="max-w-4xl font-heading text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-            Your Personal AI Assistant,{" "}
-            <span className="bg-linear-to-r from-orange-500 via-red-500 to-orange-600 bg-clip-text text-transparent">
-              Deployed in Seconds
-            </span>
+        {/* Headline — monumental typography */}
+        <BlurFade inView delay={0.08}>
+          <h1 className="max-w-[18ch] text-[52px] font-black leading-[1.04] tracking-[-0.04em] text-neutral-900 sm:text-[68px] md:text-[80px] lg:text-[92px]">
+            Your AI assistant,{" "}
+            <span className="text-orange-500">deployed in seconds.</span>
           </h1>
         </BlurFade>
 
         {/* Subtitle */}
-        <BlurFade inView delay={0.2}>
-          <p className="max-w-2xl text-balance text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
-            One click to launch OpenClaw on a dedicated VPS.
-            Connect WhatsApp, Telegram, Discord &mdash; all channels,
-            full control, your rules.
+        <BlurFade inView delay={0.14}>
+          <p className="max-w-[52ch] text-balance text-[16px] leading-[1.75] text-neutral-500 sm:text-[18px]">
+            One click to run OpenClaw on a dedicated VPS. Connect every channel
+            — WhatsApp, Telegram, Discord and more — with full control.
           </p>
         </BlurFade>
 
-        {/* CTAs */}
-        <BlurFade inView delay={0.3}>
+        {/* CTA — single dark pill like Legora */}
+        <BlurFade inView delay={0.2}>
           <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <Link href="/dashboard">
-              <ShimmerButton
-                className="gap-2.5 px-8 py-3 text-base font-semibold"
-                background="linear-gradient(135deg, #f97316, #dc2626)"
-                shimmerColor="rgba(255,255,255,0.25)"
-              >
-                Deploy My OpenClaw
-                <ArrowRight className="size-4" />
-              </ShimmerButton>
+            <Link
+              href="/dashboard"
+              className="group inline-flex items-center gap-3 rounded-full bg-neutral-900 px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-neutral-900/20 transition-all duration-300 hover:bg-neutral-700 hover:shadow-neutral-900/30 active:scale-[0.97]"
+            >
+              Deploy my OpenClaw
+              <span className="flex size-5 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:translate-x-0.5">
+                <ArrowRight className="size-3" />
+              </span>
             </Link>
             <Link
               href="#how-it-works"
-              className="group flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-[14px] font-medium text-neutral-400 transition-colors hover:text-neutral-700"
             >
-              See how it works
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              See how it works →
             </Link>
           </div>
         </BlurFade>
 
-        {/* Trust indicators */}
-        <BlurFade inView delay={0.35}>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 pt-2 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <Shield className="size-4 text-green-600" />
-              99.9% Uptime
+        {/* Social proof strip */}
+        <BlurFade inView delay={0.26}>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] font-medium text-neutral-400">
+            <span className="flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-green-500" />
+              Dedicated VPS — not shared
             </span>
-            <span className="flex items-center gap-2">
-              <Clock className="size-4 text-orange-500" />
-              &lt;60s Deploy
-            </span>
-            <span className="flex items-center gap-2">
-              <Zap className="size-4 text-blue-500" />
-              From $7.99/mo
-            </span>
-            <span className="flex items-center gap-2">
-              <Globe className="size-4 text-violet-500" />
-              3 Regions
-            </span>
+            <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
+            <span>From $7.99/mo</span>
+            <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
+            <span>&lt;60s deploy time</span>
+            <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
+            <span>3 regions</span>
           </div>
         </BlurFade>
 
-        {/* Product mockup */}
-        <BlurFade inView delay={0.4}>
-          <div className="relative mt-6 w-full max-w-4xl">
-            <div className="relative overflow-hidden rounded-xl border border-border/50 bg-muted/20 shadow-2xl shadow-black/8">
-              <Safari
-                url="fireclaw.ai/dashboard"
-                mode="default"
-                className="w-full"
-              />
-              <BorderBeam
-                size={200}
-                duration={8}
-                colorFrom="#f97316"
-                colorTo="#dc2626"
-                borderWidth={1.5}
-              />
+        {/* Terminal mockup */}
+        <BlurFade inView delay={0.32}>
+          <div className="mt-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 shadow-2xl shadow-neutral-900/25">
+            {/* Window chrome */}
+            <div className="flex items-center gap-1.5 border-b border-white/5 bg-neutral-900 px-4 py-3">
+              <span className="size-3 rounded-full bg-red-500/70" />
+              <span className="size-3 rounded-full bg-yellow-500/70" />
+              <span className="size-3 rounded-full bg-green-500/70" />
+              <span className="ml-3 flex-1 text-center text-[11px] font-medium text-neutral-500">
+                fireclaw.ai/dashboard
+              </span>
             </div>
-            {/* Fade out at bottom */}
-            <div className="pointer-events-none absolute -inset-x-20 -bottom-8 h-32 bg-linear-to-t from-background via-background/80 to-transparent" />
+            <DeployTerminal />
           </div>
         </BlurFade>
 
-        {/* Stats */}
-        <BlurFade inView delay={0.5}>
-          <div className="grid grid-cols-2 gap-8 pt-4 sm:grid-cols-4 sm:gap-12">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                <NumberTicker value={342} />k+
-              </span>
-              <span className="text-xs text-muted-foreground sm:text-sm">
-                GitHub Stars
-              </span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                <NumberTicker value={20} />+
-              </span>
-              <span className="text-xs text-muted-foreground sm:text-sm">
-                Channels
-              </span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                &lt;<NumberTicker value={60} />s
-              </span>
-              <span className="text-xs text-muted-foreground sm:text-sm">
-                Deploy Time
-              </span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                <NumberTicker value={4} />
-              </span>
-              <span className="text-xs text-muted-foreground sm:text-sm">
-                VPS Tiers
-              </span>
+        {/* Works with — channel logos */}
+        <BlurFade inView delay={0.38}>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+              Works with
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {channelLogos.map((ch) => (
+                <div
+                  key={ch.name}
+                  title={ch.name}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-100 bg-white text-[11px] font-bold shadow-sm transition-transform hover:scale-110"
+                  style={{ color: ch.color }}
+                >
+                  {ch.letter}
+                </div>
+              ))}
+              <span className="text-[12px] font-medium text-neutral-400">+14 more</span>
             </div>
           </div>
         </BlurFade>

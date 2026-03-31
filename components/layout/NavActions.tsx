@@ -3,41 +3,37 @@
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 export function NavActions({ isLoggedIn }: { isLoggedIn: boolean }) {
   if (isLoggedIn) {
     return (
       <div className="hidden items-center md:flex">
-        <Button
-          size="sm"
-          className="gap-1.5"
-          render={<Link href="/dashboard" />}
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-700"
         >
           Dashboard
-          <ArrowRight data-icon="inline-end" />
-        </Button>
+          <ArrowRight className="size-3.5" />
+        </Link>
       </div>
     )
   }
 
   return (
-    <div className="hidden items-center gap-2 md:flex">
-      <Button
-        variant="ghost"
-        size="sm"
+    <div className="hidden items-center gap-3 md:flex">
+      <button
         onClick={() => signIn("google", { redirectTo: "/dashboard" })}
+        className="text-[13px] font-medium text-neutral-500 transition-colors hover:text-neutral-900"
       >
-        Sign In
-      </Button>
-      <Button
-        size="sm"
-        className="gap-1.5"
+        Log in
+      </button>
+      <button
         onClick={() => signIn("google", { redirectTo: "/dashboard" })}
+        className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-700"
       >
-        Get Started
-        <ArrowRight data-icon="inline-end" />
-      </Button>
+        Get started
+        <ArrowRight className="size-3.5" />
+      </button>
     </div>
   )
 }
