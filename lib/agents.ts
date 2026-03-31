@@ -13,11 +13,6 @@ export interface Agent {
   serverIp?: string;
   gatewayToken?: string; // OpenClaw gateway auth token
   region: string;
-  channels: {
-    whatsapp: boolean;
-    telegram: boolean;
-    webchat: boolean;
-  };
   messageCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -28,13 +23,12 @@ function agents() {
 }
 
 export async function createAgent(
-  data: Omit<Agent, "_id" | "createdAt" | "updatedAt" | "messageCount" | "channels" | "status">
+  data: Omit<Agent, "_id" | "createdAt" | "updatedAt" | "messageCount" | "status">
 ): Promise<Agent> {
   const now = new Date();
   const agent: Omit<Agent, "_id"> = {
     ...data,
     status: "provisioning",
-    channels: { whatsapp: false, telegram: false, webchat: false },
     messageCount: 0,
     createdAt: now,
     updatedAt: now,
@@ -63,7 +57,7 @@ export async function getAgentById(
 export async function updateAgent(
   id: string,
   userId: string,
-  update: Partial<Pick<Agent, "name" | "status" | "serverId" | "serverIp" | "gatewayToken" | "channels">>
+  update: Partial<Pick<Agent, "name" | "status" | "serverId" | "serverIp" | "gatewayToken">>
 ): Promise<boolean> {
   if (!ObjectId.isValid(id)) return false;
   const result = await agents().updateOne(

@@ -65,7 +65,7 @@ export async function createServer(opts: {
 }): Promise<HetznerServer> {
   const body = {
     name: opts.name,
-    server_type: opts.serverType ?? "cpx22",
+    server_type: opts.serverType ?? "cx23",
     image: opts.image ?? "ubuntu-24.04",
     location: opts.location ?? "fsn1",
     user_data: opts.userData,

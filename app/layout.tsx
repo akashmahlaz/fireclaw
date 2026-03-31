@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FireClaw — Deploy & Manage AI Agents",
+  title: "FireClaw — Deploy OpenClaw in Seconds",
   description:
-    "Deploy, manage, and monitor multiple AI agents from one dashboard. Built for agencies, teams, and power users.",
+    "One-click deploy your personal AI assistant on a dedicated VPS. Full control over WhatsApp, Telegram, Discord and 20+ channels.",
 };
 
 export default function RootLayout({

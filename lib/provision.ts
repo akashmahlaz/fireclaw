@@ -9,7 +9,7 @@ import { updateAgent } from "./agents";
  * 1. Install Docker CE
  * 2. Pull ghcr.io/openclaw/openclaw:latest
  * 3. Run OpenClaw Gateway in a container on port 18789
- * 4. Expose the Control UI for WhatsApp QR scan, chat, and configuration
+ * 4. Expose the Control UI for configuring channels and AI models
  */
 function buildCloudInit(opts: {
   gatewayToken: string;
@@ -143,7 +143,7 @@ export async function provisionAgent(opts: {
   // Create the Hetzner server
   const server = await createServer({
     name: `fireclaw-${opts.agentId}`,
-    serverType: "cpx22", // 2 vCPU, 4GB RAM - cost-optimized for AMD
+    serverType: "cx23", // 2 vCPU, 4GB RAM — cheapest at €3.49/mo
     image: "ubuntu-24.04",
     location,
     userData,

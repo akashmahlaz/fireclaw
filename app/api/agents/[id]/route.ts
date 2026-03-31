@@ -56,7 +56,6 @@ export async function PATCH(
   const allowed: Record<string, boolean> = {
     name: true,
     status: true,
-    channels: true,
   };
   const update: Record<string, unknown> = {};
   for (const key of Object.keys(body)) {

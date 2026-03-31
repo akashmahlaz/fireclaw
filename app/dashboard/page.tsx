@@ -87,8 +87,8 @@ export default async function DashboardPage() {
               3
             </span>
             <p>
-              <strong>Connect</strong> — Link WhatsApp (QR scan), Telegram, or embed
-              web chat on your site. You&apos;re live!
+              <strong>Connect</strong> — Open the agent dashboard to configure
+              channels, AI models, and more. You&apos;re live!
             </p>
           </div>
         </CardContent>

@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { getAgentById } from "@/lib/agents";
@@ -88,7 +87,7 @@ export default async function AgentDetailPage({
         </Card>
       </div>
 
-      {/* OpenClaw Access Card */}
+      {/* Provisioning state */}
       {agent.status === "provisioning" && (
         <Card>
           <CardContent className="flex items-center gap-3 py-6">
@@ -103,12 +102,13 @@ export default async function AgentDetailPage({
         </Card>
       )}
 
+      {/* Running — show access to OpenClaw Control UI */}
       {agent.status === "running" && agent.serverIp && (
         <Card>
           <CardHeader>
             <CardTitle>Agent Dashboard</CardTitle>
             <CardDescription>
-              Open the OpenClaw Control UI to connect WhatsApp, Telegram, configure AI models, and manage your agent.
+              Open the OpenClaw Control UI to configure AI models, connect channels, and manage your agent.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -129,6 +129,7 @@ export default async function AgentDetailPage({
         </Card>
       )}
 
+      {/* Error state */}
       {agent.status === "error" && (
         <Card>
           <CardContent className="py-6">
@@ -138,67 +139,6 @@ export default async function AgentDetailPage({
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Channels</CardTitle>
-          <CardDescription>
-            Connect your agent to messaging platforms via the Agent Dashboard above.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-md bg-green-100 dark:bg-green-900/30">
-                <MessageSquare className="size-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">WhatsApp</p>
-                <p className="text-xs text-muted-foreground">
-                  {agent.channels.whatsapp ? "Connected" : "Connect via Agent Dashboard → Channels → Show QR"}
-                </p>
-              </div>
-            </div>
-            <Badge variant={agent.channels.whatsapp ? "default" : "outline"}>
-              {agent.channels.whatsapp ? "Connected" : "Not connected"}
-            </Badge>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-md bg-blue-100 dark:bg-blue-900/30">
-                <Globe className="size-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Telegram</p>
-                <p className="text-xs text-muted-foreground">
-                  {agent.channels.telegram ? "Connected" : "Connect via Agent Dashboard → Channels"}
-                </p>
-              </div>
-            </div>
-            <Badge variant={agent.channels.telegram ? "default" : "outline"}>
-              {agent.channels.telegram ? "Connected" : "Not connected"}
-            </Badge>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-md bg-purple-100 dark:bg-purple-900/30">
-                <Globe className="size-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Web Chat</p>
-                <p className="text-xs text-muted-foreground">
-                  {agent.channels.webchat ? "Embedded" : "Set up via Agent Dashboard"}
-                </p>
-              </div>
-            </div>
-            <Badge variant={agent.channels.webchat ? "default" : "outline"}>
-              {agent.channels.webchat ? "Active" : "Not set up"}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
 
       <AgentActions agentId={agent._id!.toString()} status={agent.status} />
     </div>
