@@ -1,22 +1,28 @@
 import { randomBytes } from "crypto";
 import { createServer, deleteServer, getServer, rebootServer } from "./hetzner";
+import { createDNSRecord, deleteDNSRecord, generateSubdomain } from "./cloudflare";
 import { updateAgent } from "./agents";
 
+/** Map tier → Hetzner server type */
+const TIER_SERVER_MAP: Record<string, string> = {
+  starter: "cx22",     // 2 vCPU, 4 GB RAM  — ~€3.49/mo
+  standard: "cx32",    // 4 vCPU, 8 GB RAM  — ~€6.49/mo
+  pro: "cx42",         // 8 vCPU, 16 GB RAM — ~€14.49/mo
+  enterprise: "cx52",  // 16 vCPU, 32 GB RAM— ~€28.49/mo
+};
+
 /**
- * Generates a cloud-init script that provisions a VPS with Docker + OpenClaw.
- *
- * After boot the VPS will:
- * 1. Install Docker CE
- * 2. Pull ghcr.io/openclaw/openclaw:latest
- * 3. Run OpenClaw Gateway in a container on port 18789
- * 4. Expose the Control UI for configuring channels and AI models
+ * Generates a cloud-init script that provisions a VPS with:
+ * 1. Docker CE + Docker Compose
+ * 2. Caddy reverse proxy (auto-HTTPS via Let's Encrypt)
+ * 3. OpenClaw running on :18789 (proxied through Caddy)
  */
 function buildCloudInit(opts: {
   gatewayToken: string;
+  domain: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
 }): string {
-  // Docker Compose file embedded inline
   const compose = `
 version: "3.8"
 services:
@@ -25,7 +31,7 @@ services:
     container_name: openclaw
     restart: unless-stopped
     ports:
-      - "18789:18789"
+      - "127.0.0.1:18789:18789"
     volumes:
       - openclaw-data:/home/node/.openclaw
       - /var/run/docker.sock:/var/run/docker.sock
@@ -35,8 +41,31 @@ services:
       - OPENCLAW_GATEWAY_MODE=local
       - OPENAI_API_KEY=\${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=\${ANTHROPIC_API_KEY:-}
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - openclaw
+
 volumes:
   openclaw-data:
+  caddy-data:
+  caddy-config:
+`.trim();
+
+  const caddyfile = `
+${opts.domain} {
+  reverse_proxy openclaw:18789
+}
 `.trim();
 
   const envFile = [
@@ -67,6 +96,11 @@ cat > docker-compose.yml << 'COMPOSE_EOF'
 ${compose}
 COMPOSE_EOF
 
+# ── Write Caddyfile ─────────────────────────────────────────────────
+cat > Caddyfile << 'CADDY_EOF'
+${caddyfile}
+CADDY_EOF
+
 # ── Write environment file ──────────────────────────────────────────
 cat > .env << 'ENV_EOF'
 ${envFile}
@@ -77,21 +111,13 @@ chmod 600 .env
 docker compose pull
 docker compose up -d
 
-# ── Wait for health check ───────────────────────────────────────────
-for i in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:18789/healthz > /dev/null 2>&1; then
-    echo "OpenClaw is healthy"
-    break
-  fi
-  sleep 5
-done
-
-# ── Firewall: allow only SSH + OpenClaw port ────────────────────────
+# ── Firewall: allow SSH + HTTP + HTTPS only ─────────────────────────
 apt-get install -y ufw
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 22/tcp
-ufw allow 18789/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
 ufw --force enable
 
 echo "FireClaw provisioning complete"
@@ -106,23 +132,32 @@ export function generateGatewayToken(): string {
 }
 
 /**
- * Provision a new Hetzner VPS with OpenClaw pre-installed.
+ * Provision a new Hetzner VPS with OpenClaw + Caddy (HTTPS) + Cloudflare DNS.
  *
- * Returns the server info + gateway token needed to access the Control UI.
+ * Flow:
+ * 1. Generate subdomain + gateway token
+ * 2. Create Hetzner VPS with cloud-init (Docker + Caddy + OpenClaw)
+ * 3. Create Cloudflare A record pointing subdomain → VPS IP
+ * 4. Update agent record with server info + domain
  */
 export async function provisionAgent(opts: {
   agentId: string;
   userId: string;
   name: string;
   region?: string;
+  tier?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
 }): Promise<{
   serverId: string;
   serverIp: string;
+  domain: string;
+  dnsRecordId: string;
   gatewayToken: string;
 }> {
   const gatewayToken = generateGatewayToken();
+  const subdomain = generateSubdomain(opts.name, opts.agentId);
+  const domain = `${subdomain}.${process.env.AGENT_BASE_DOMAIN ?? "fireclaw.ai"}`;
 
   // Map regions to Hetzner locations
   const locationMap: Record<string, string> = {
@@ -133,32 +168,43 @@ export async function provisionAgent(opts: {
     "ap-southeast": "sin1",
   };
   const location = locationMap[opts.region ?? "eu-central"] ?? "fsn1";
+  const serverType = TIER_SERVER_MAP[opts.tier ?? "starter"] ?? "cx22";
 
   const userData = buildCloudInit({
     gatewayToken,
+    domain,
     openaiApiKey: opts.openaiApiKey,
     anthropicApiKey: opts.anthropicApiKey,
   });
 
-  // Create the Hetzner server
+  // 1. Create Hetzner VPS
   const server = await createServer({
     name: `fireclaw-${opts.agentId}`,
-    serverType: "cx23", // 2 vCPU, 4GB RAM — cheapest at €3.49/mo
+    serverType,
     image: "ubuntu-24.04",
     location,
     userData,
   });
 
-  // Update agent record with server info
+  const serverIp = server.public_net.ipv4.ip;
+
+  // 2. Create Cloudflare DNS record
+  const dnsRecord = await createDNSRecord(subdomain, serverIp);
+
+  // 3. Update agent record
   await updateAgent(opts.agentId, opts.userId, {
     serverId: String(server.id),
-    serverIp: server.public_net.ipv4.ip,
+    serverIp,
+    domain,
+    dnsRecordId: dnsRecord.id,
     status: "provisioning",
   });
 
   return {
     serverId: String(server.id),
-    serverIp: server.public_net.ipv4.ip,
+    serverIp,
+    domain,
+    dnsRecordId: dnsRecord.id,
     gatewayToken,
   };
 }
@@ -187,10 +233,20 @@ export async function waitForHealth(
 }
 
 /**
- * Destroy an agent's VPS on Hetzner.
+ * Destroy an agent's VPS on Hetzner and clean up DNS.
  */
-export async function destroyAgent(serverId: string): Promise<void> {
+export async function destroyAgent(
+  serverId: string,
+  dnsRecordId?: string
+): Promise<void> {
   await deleteServer(Number(serverId));
+  if (dnsRecordId) {
+    try {
+      await deleteDNSRecord(dnsRecordId);
+    } catch (err) {
+      console.error(`Failed to delete DNS record ${dnsRecordId}:`, err);
+    }
+  }
 }
 
 /**

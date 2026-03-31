@@ -19,21 +19,25 @@ export async function POST(
   }
 
   if (agent.status !== "provisioning" || !agent.serverIp) {
-    return Response.json({ status: agent.status });
+    return Response.json({ status: agent.status, domain: agent.domain });
   }
 
-  // Quick health check (single attempt, don't block long)
+  // Quick health check — try HTTPS domain first, fallback to raw IP
+  const healthUrl = agent.domain
+    ? `https://${agent.domain}/healthz`
+    : `http://${agent.serverIp}:18789/healthz`;
+
   try {
-    const res = await fetch(`http://${agent.serverIp}:18789/healthz`, {
+    const res = await fetch(healthUrl, {
       signal: AbortSignal.timeout(5000),
     });
     if (res.ok) {
       await updateAgent(id, session.user.id, { status: "running" });
-      return Response.json({ status: "running" });
+      return Response.json({ status: "running", domain: agent.domain });
     }
   } catch {
     // Not ready yet
   }
 
-  return Response.json({ status: "provisioning" });
+  return Response.json({ status: "provisioning", domain: agent.domain });
 }

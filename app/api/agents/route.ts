@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, template, region } = body;
+  const { name, template, region, tier } = body;
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return Response.json({ error: "Name is required" }, { status: 400 });
@@ -31,6 +31,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid template" }, { status: 400 });
   }
 
+  const allowedTiers = ["starter", "standard", "pro", "enterprise"] as const;
+  const agentTier = allowedTiers.includes(tier) ? tier : "starter";
+
   const userId = session.user.id;
 
   const agent = await createAgent({
@@ -38,6 +41,7 @@ export async function POST(request: NextRequest) {
     name: name.trim(),
     template,
     region: region || "eu-central",
+    tier: agentTier,
   });
 
   const agentId = agent._id!.toString();
@@ -48,6 +52,7 @@ export async function POST(request: NextRequest) {
     userId,
     name: name.trim(),
     region: region || "eu-central",
+    tier: agentTier,
   })
     .then(async ({ gatewayToken }) => {
       await updateAgent(agentId, userId, { gatewayToken });

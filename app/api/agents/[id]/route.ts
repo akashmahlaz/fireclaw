@@ -90,10 +90,10 @@ export async function DELETE(
     return Response.json({ error: "Agent not found" }, { status: 404 });
   }
 
-  // Terminate Hetzner server before deleting from DB
+  // Terminate Hetzner server + clean up DNS before deleting from DB
   if (agent.serverId) {
     try {
-      await destroyAgent(agent.serverId);
+      await destroyAgent(agent.serverId, agent.dnsRecordId);
     } catch (err) {
       console.error(`Failed to destroy server ${agent.serverId}:`, err);
     }

@@ -11,8 +11,11 @@ export interface Agent {
   status: "provisioning" | "running" | "stopped" | "error";
   serverId?: string; // Hetzner server ID
   serverIp?: string;
+  domain?: string; // e.g. "my-bot-a1b2c3.fireclaw.ai"
+  dnsRecordId?: string; // Cloudflare DNS record ID for cleanup
   gatewayToken?: string; // OpenClaw gateway auth token
   region: string;
+  tier: "starter" | "standard" | "pro" | "enterprise";
   messageCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +31,7 @@ export async function createAgent(
   const now = new Date();
   const agent: Omit<Agent, "_id"> = {
     ...data,
+    tier: data.tier ?? "starter",
     status: "provisioning",
     messageCount: 0,
     createdAt: now,
@@ -57,7 +61,7 @@ export async function getAgentById(
 export async function updateAgent(
   id: string,
   userId: string,
-  update: Partial<Pick<Agent, "name" | "status" | "serverId" | "serverIp" | "gatewayToken">>
+  update: Partial<Pick<Agent, "name" | "status" | "serverId" | "serverIp" | "gatewayToken" | "domain" | "dnsRecordId">>
 ): Promise<boolean> {
   if (!ObjectId.isValid(id)) return false;
   const result = await agents().updateOne(
