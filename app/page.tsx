@@ -4,6 +4,9 @@ import { Hero } from "@/components/layout/Hero";
 import { TerminalShowcase } from "@/components/layout/TerminalShowcase";
 import { VideoShowcase } from "@/components/layout/VideoShowcase";
 import { ChannelOrbit } from "@/components/layout/ChannelOrbit";
+import { Features } from "@/components/layout/Features";
+import { Stats } from "@/components/layout/Stats";
+import { HowItWorks } from "@/components/layout/HowItWorks";
 import { Footer } from "@/components/layout/Footer";
 
 export default function Home() {
@@ -15,6 +18,9 @@ export default function Home() {
       <TerminalShowcase />
       <VideoShowcase />
       <ChannelOrbit />
+      <Features />
+      <Stats />
+      <HowItWorks />
     </>
   );
 }
