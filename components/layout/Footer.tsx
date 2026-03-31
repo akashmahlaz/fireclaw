@@ -24,6 +24,7 @@ const footerLinks = {
     { label: "Privacy", href: "/privacy-policy" },
     { label: "Terms", href: "terms-and-conditions" },
     { label: "DPA", href: "dpa" },
+    { label: "Security", href: "security" }
   ],
 }
 
