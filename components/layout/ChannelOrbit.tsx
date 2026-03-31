@@ -2,7 +2,6 @@
 
 import { BlurFade } from "@/components/ui/blur-fade"
 import { OrbitingCircles } from "@/components/ui/orbiting-circles"
-import { NeonGradientCard } from "@/components/ui/neon-gradient-card"
 
 export function ChannelOrbit() {
   return (
@@ -26,15 +25,8 @@ export function ChannelOrbit() {
           </div>
         </BlurFade>
 
-        {/* Neon card wrapping the orbiting circles */}
         <BlurFade inView delay={0.1}>
-          <NeonGradientCard
-            borderSize={2}
-            borderRadius={28}
-            neonColors={{ firstColor: "#f97316", secondColor: "#fbbf24" }}
-            className="mx-auto w-full"
-          >
-            <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden sm:h-[600px]">
+          <div className="relative mx-auto flex h-[500px] w-full flex-col items-center justify-center overflow-hidden sm:h-[600px]">
               {/* Center logo */}
               <div className="z-10 flex size-20 items-center justify-center rounded-2xl border-2 border-neutral-200 bg-white shadow-lg">
                 <span className="text-[18px] font-black tracking-[-0.04em] text-neutral-900">
@@ -58,8 +50,7 @@ export function ChannelOrbit() {
                 <Icons.whatsapp />
                 <Icons.openai />
               </OrbitingCircles>
-            </div>
-          </NeonGradientCard>
+          </div>
         </BlurFade>
       </div>
     </section>
