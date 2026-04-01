@@ -1,54 +1,8 @@
 import { randomBytes } from "crypto";
-import { createServer, deleteServer, getServer, rebootServer } from "./hetzner";
+import { deleteServer, rebootServer } from "./hetzner";
 import { createDNSRecord, deleteDNSRecord, generateSubdomain } from "./cloudflare";
 import { updateAgent, pushProvisionLog } from "./agents";
-
-/** Map tier + location → Hetzner server type.
- *
- * CX  = Cost-Optimized Intel/AMD — EU only (fsn1, hel1, nbg1)
- * CAX = Ampere ARM — EU + US-East (ash)
- * CPX = Shared Intel/AMD — All locations including Singapore (sin)
- *
- * We pick the cheapest family available at each location.
- */
-const TIER_SERVER_MAP: Record<string, Record<string, string>> = {
-  starter: {
-    fsn1: "cx23",   // 2c/4GB/40GB   €4.99
-    hel1: "cx23",
-    nbg1: "cx23",
-    ash:  "cax11",  // 2c/4GB/40GB   €3.99
-    hil:  "cpx11",  // 2c/2GB/40GB   €6.99 (only 2GB — closest match)
-    sin:  "cpx21",  // 3c/4GB/80GB   €21.99
-  },
-  standard: {
-    fsn1: "cx33",   // 4c/8GB/80GB   €7.99
-    hel1: "cx33",
-    nbg1: "cx33",
-    ash:  "cax21",  // 4c/8GB/80GB   €6.99
-    hil:  "cpx31",  // 4c/8GB/160GB  €24.99
-    sin:  "cpx31",  // 4c/8GB/160GB  €38.49
-  },
-  pro: {
-    fsn1: "cx43",   // 8c/16GB/160GB €13.99
-    hel1: "cx43",
-    nbg1: "cx43",
-    ash:  "cax31",  // 8c/16GB/160GB €13.49
-    hil:  "cpx41",  // 8c/16GB/240GB €46.49
-    sin:  "cpx41",  // 8c/16GB/240GB €65.49
-  },
-  enterprise: {
-    fsn1: "cx53",   // 16c/32GB/320GB €26.49
-    hel1: "cx53",
-    nbg1: "cx53",
-    ash:  "cax41",  // 16c/32GB/320GB €26.99
-    hil:  "cpx51",  // 16c/32GB/360GB €92.49
-    sin:  "cpx51",  // 16c/32GB/360GB €117.99
-  },
-};
-
-function resolveServerType(tier: string, location: string): string {
-  return TIER_SERVER_MAP[tier]?.[location] ?? TIER_SERVER_MAP.starter?.[location] ?? "cx23";
-}
+import { getProvider } from "./providers";
 
 /**
  * Generates a cloud-init script that provisions a VPS with:
@@ -216,9 +170,9 @@ export async function provisionAgent(opts: {
     "ap-southeast": "sin",
   };
   const location = locationMap[opts.region ?? "eu-central"] ?? "fsn1";
-  const serverType = resolveServerType(opts.tier ?? "starter", location);
+  const tier = opts.tier ?? "starter";
 
-  console.log(`[provision] Agent ${opts.agentId}: region=${opts.region} → location=${location}, tier=${opts.tier} → serverType=${serverType}`);
+  console.log(`[provision] Agent ${opts.agentId}: region=${opts.region} → location=${location}, tier=${tier}`);
   console.log(`[provision] Agent ${opts.agentId}: subdomain=${subdomain}, domain=${domain}`);
 
   const userData = buildCloudInit({
@@ -232,27 +186,26 @@ export async function provisionAgent(opts: {
   // Log: Starting
   await pushProvisionLog(opts.agentId, "Payment verified — starting provisioning", "ok");
 
-  // 1. Create Hetzner VPS
-  console.log(`[provision] Agent ${opts.agentId}: calling Hetzner createServer(name=fireclaw-${opts.agentId}, type=${serverType}, image=ubuntu-24.04, location=${location})`);
-  await pushProvisionLog(opts.agentId, `Creating ${serverType} VPS in ${location}`, "pending");
-  let server;
+  // 1. Create VPS via provider (handles fallback chain internally)
+  await pushProvisionLog(opts.agentId, `Creating VPS in ${location} (${tier} tier)`, "pending");
+  let provisionResult;
   try {
-    server = await createServer({
+    const provider = getProvider("hetzner");
+    provisionResult = await provider.provision({
       name: `fireclaw-${opts.agentId}`,
-      serverType,
-      image: "ubuntu-24.04",
       location,
+      tier,
       userData,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[provision] Agent ${opts.agentId}: Hetzner createServer FAILED:`, msg);
-    await pushProvisionLog(opts.agentId, `Hetzner error: ${msg}`, "error");
+    console.error(`[provision] Agent ${opts.agentId}: VPS creation FAILED:`, msg);
+    await pushProvisionLog(opts.agentId, `Server error: ${msg}`, "error");
     throw err;
   }
-  const serverIp = server.public_net.ipv4.ip;
-  console.log(`[provision] Agent ${opts.agentId}: VPS created — id=${server.id}, ip=${serverIp}, type=${server.server_type.name}, dc=${server.datacenter.name}`);
-  await pushProvisionLog(opts.agentId, `VPS online — ${server.server_type.name} in ${server.datacenter.name} (IP: ${serverIp})`, "ok");
+  const { serverId, serverIp, serverType, datacenter } = provisionResult;
+  console.log(`[provision] Agent ${opts.agentId}: VPS created — type=${serverType}, id=${serverId}, ip=${serverIp}, dc=${datacenter}`);
+  await pushProvisionLog(opts.agentId, `VPS online — ${serverType} in ${datacenter} (IP: ${serverIp})`, "ok");
 
   // 2. Create Cloudflare DNS record
   console.log(`[provision] Agent ${opts.agentId}: creating Cloudflare DNS A record: ${subdomain} → ${serverIp}`);
@@ -272,7 +225,7 @@ export async function provisionAgent(opts: {
   // 3. Update agent record
   console.log(`[provision] Agent ${opts.agentId}: updating agent record with server info`);
   await updateAgent(opts.agentId, opts.userId, {
-    serverId: String(server.id),
+    serverId,
     serverIp,
     domain,
     dnsRecordId: dnsRecord.id,
@@ -285,7 +238,7 @@ export async function provisionAgent(opts: {
   await pushProvisionLog(opts.agentId, "Waiting for Docker + OpenClaw install (cloud-init ~2-4 min)", "pending");
 
   return {
-    serverId: String(server.id),
+    serverId,
     serverIp,
     domain,
     dnsRecordId: dnsRecord.id,

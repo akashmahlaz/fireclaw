@@ -52,7 +52,9 @@ export async function createRazorpayOrder(opts: {
   agentName: string;
 }) {
   // Use dynamic per-region pricing if provided, otherwise fall back to tier default
-  const amount = opts.priceInr ? opts.priceInr : getAmount(opts.tier);
+  // TODO: restore dynamic pricing for production
+  // const amount = opts.priceInr ? opts.priceInr : getAmount(opts.tier);
+  const amount = 100; // ₹1 for testing
   const client = getClient();
 
   const order = await client.orders.create({

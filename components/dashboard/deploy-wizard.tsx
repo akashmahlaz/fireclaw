@@ -46,15 +46,16 @@ interface ProvisionLogEntry {
 
 const steps = ["Name", "Region", "Tier", "API Key", "Deploy"]
 
-/* ── Types for live availability data from Hetzner ─────────────────── */
+/* ── Types for live availability data (provider-agnostic) ─────────── */
 interface TierOption {
-  serverType: string
+  guaranteedType: string
+  fallbackChain: string[]
   cores: number
   memory: number
   disk: number
-  hetznerEur: number
+  providerCostEur: number
   priceInr: number
-  architecture: string
+  architecture: "x86" | "arm"
 }
 
 interface LocationInfo {
@@ -66,6 +67,7 @@ interface LocationInfo {
 }
 
 interface AvailabilityData {
+  provider: string
   locations: LocationInfo[]
   tierDefs: { id: string; label: string; minCores: number; minMemory: number }[]
 }
