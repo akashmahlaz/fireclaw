@@ -256,8 +256,8 @@ export function DeployWizardClient() {
 
   const canNext = () => {
     if (step === 0) return name.trim().length > 0
-    if (step === 1) return !!region
-    if (step === 2) return !!tier
+    if (step === 1) return !!region && !!currentLocation
+    if (step === 2) return !!tier && !!currentTierOption
     if (step === 3) return true
     return false
   }
