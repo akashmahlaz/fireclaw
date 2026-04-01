@@ -54,7 +54,7 @@ export function TerminalShowcase() {
               <span>  → Booting dedicated instance from secure OS snapshot...</span>
             </AnimatedSpan>
             <AnimatedSpan className="text-emerald-400 mb-2">
-              <span>  ✓ Dedicated VPS running (CX32 · 4 vCPU · 8 GB RAM)</span>
+              <span>  ✓ Dedicated VPS running (CX33 · 4 vCPU · 8 GB RAM)</span>
             </AnimatedSpan>
 
             <AnimatedSpan className="text-neutral-500 font-bold mb-1">

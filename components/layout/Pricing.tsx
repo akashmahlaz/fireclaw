@@ -27,7 +27,7 @@ const plans = [
     price: "$14.99",
     period: "/mo",
     description: "For creators and small teams.",
-    specs: "4 vCPU · 8 GB RAM · 160 GB NVMe",
+    specs: "4 vCPU · 8 GB RAM · 80 GB NVMe",
     features: [
       "1 OpenClaw instance",
       "10 channels included",
@@ -44,7 +44,7 @@ const plans = [
     period: "/mo",
     badge: "Most Popular",
     description: "For businesses scaling fast.",
-    specs: "8 vCPU · 16 GB RAM · 320 GB NVMe",
+    specs: "8 vCPU · 16 GB RAM · 160 GB NVMe",
     features: [
       "Up to 3 instances",
       "Unlimited channels",
@@ -61,7 +61,7 @@ const plans = [
     price: "$59.99",
     period: "/mo",
     description: "Dedicated infrastructure, no compromises.",
-    specs: "16 vCPU · 32 GB RAM · 640 GB NVMe",
+    specs: "16 vCPU · 32 GB RAM · 320 GB NVMe",
     features: [
       "Unlimited instances",
       "Unlimited channels",

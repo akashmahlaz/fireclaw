@@ -19,15 +19,23 @@ function headers() {
 }
 
 async function hetznerFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = init?.method ?? "GET";
+  console.log(`[hetzner] ${method} ${BASE}${path}`);
+  if (init?.body) {
+    console.log(`[hetzner] Request body:`, init.body);
+  }
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: { ...headers(), ...init?.headers },
   });
   if (!res.ok) {
     const body = await res.text();
+    console.error(`[hetzner] ${method} ${path} → ${res.status}: ${body}`);
     throw new Error(`Hetzner API error ${res.status}: ${body}`);
   }
-  return res.json() as Promise<T>;
+  const data = await res.json() as T;
+  console.log(`[hetzner] ${method} ${path} → ${res.status} OK`);
+  return data;
 }
 
 // ── Types ──────────────────────────────────────────────────────────────

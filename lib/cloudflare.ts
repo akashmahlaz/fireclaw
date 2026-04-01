@@ -59,6 +59,7 @@ export async function createDNSRecord(
   ip: string
 ): Promise<DNSRecord> {
   const fqdn = `${subdomain}.${baseDomain()}`;
+  console.log(`[cloudflare] Creating A record: ${fqdn} → ${ip} (zone=${zoneId()}, proxied=false, ttl=60)`);
 
   const res = await fetch(`${CF_BASE}/zones/${zoneId()}/dns_records`, {
     method: "POST",
@@ -75,11 +76,13 @@ export async function createDNSRecord(
   const data: CFResult<DNSRecord> = await res.json();
 
   if (!data.success) {
+    console.error(`[cloudflare] DNS create FAILED:`, data.errors);
     throw new Error(
       `Cloudflare DNS error: ${data.errors.map((e) => e.message).join(", ")}`
     );
   }
 
+  console.log(`[cloudflare] DNS record created: id=${data.result.id}, ${data.result.name} → ${data.result.content}`);
   return data.result;
 }
 

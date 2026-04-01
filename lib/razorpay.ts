@@ -47,9 +47,12 @@ export function getTierAmount(tier: BillingTier): number {
 export async function createRazorpayOrder(opts: {
   userId: string;
   tier: BillingTier;
+  region?: string;
+  priceInr?: number;
   agentName: string;
 }) {
-  const amount = getAmount(opts.tier);
+  // Use dynamic per-region pricing if provided, otherwise fall back to tier default
+  const amount = opts.priceInr ? opts.priceInr : getAmount(opts.tier);
   const client = getClient();
 
   const order = await client.orders.create({
@@ -59,6 +62,7 @@ export async function createRazorpayOrder(opts: {
     notes: {
       userId: opts.userId,
       tier: opts.tier,
+      region: opts.region ?? "eu-central",
       agentName: opts.agentName,
       product: "fireclaw-agent-deploy",
     },

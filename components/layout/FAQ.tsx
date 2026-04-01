@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "What regions are available?",
-    a: "We currently offer EU (Nuremberg), US (Ashburn), and Asia (Singapore). Enterprise plans can request custom regions.",
+    a: "We currently offer EU (Falkenstein, Germany), US (Ashburn, Virginia), and Asia (Singapore). Enterprise plans can request custom regions.",
   },
   {
     q: "Can I cancel anytime?",

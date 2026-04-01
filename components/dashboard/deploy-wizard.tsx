@@ -46,18 +46,40 @@ interface ProvisionLogEntry {
 
 const steps = ["Name", "Region", "Tier", "API Key", "Deploy"]
 
-const regions = [
-  { id: "eu-central", label: "Frankfurt", flag: "🇩🇪", latency: "~20ms" },
-  { id: "us-east", label: "Virginia", flag: "🇺🇸", latency: "~45ms" },
-  { id: "ap-south", label: "Mumbai", flag: "🇮🇳", latency: "~60ms" },
-]
+/* ── Types for live availability data from Hetzner ─────────────────── */
+interface TierOption {
+  serverType: string
+  cores: number
+  memory: number
+  disk: number
+  hetznerEur: number
+  priceInr: number
+  architecture: string
+}
 
-const tiers = [
-  { id: "starter", label: "Starter", price: "$7.99", specs: "2 vCPU · 4 GB · 80 GB", desc: "Personal use, light traffic" },
-  { id: "standard", label: "Standard", price: "$14.99", specs: "4 vCPU · 8 GB · 160 GB", desc: "Small business, moderate traffic", popular: true },
-  { id: "pro", label: "Pro", price: "$29.99", specs: "6 vCPU · 16 GB · 320 GB", desc: "High traffic, multi-channel" },
-  { id: "enterprise", label: "Enterprise", price: "$59.99", specs: "8 vCPU · 32 GB · 640 GB", desc: "Agency-level, max performance" },
-]
+interface LocationInfo {
+  id: string
+  label: string
+  country: string
+  region: string
+  tiers: Record<string, TierOption>
+}
+
+interface AvailabilityData {
+  locations: LocationInfo[]
+  tierDefs: { id: string; label: string; minCores: number; minMemory: number }[]
+}
+
+const TIER_LABELS: Record<string, { label: string; desc: string; popular?: boolean }> = {
+  starter: { label: "Starter", desc: "Personal use, light traffic" },
+  standard: { label: "Standard", desc: "Small business, moderate traffic", popular: true },
+  pro: { label: "Pro", desc: "High traffic, multi-channel" },
+  enterprise: { label: "Enterprise", desc: "Agency-level, max performance" },
+}
+
+function formatInr(paise: number): string {
+  return `₹${(paise / 100).toLocaleString("en-IN")}`
+}
 
 export function DeployWizardClient() {
   const router = useRouter()
@@ -71,11 +93,45 @@ export function DeployWizardClient() {
   const [agentDomain, setAgentDomain] = useState<string | null>(null)
   const [provisionLog, setProvisionLog] = useState<ProvisionLogEntry[]>([])
 
+  // Live availability from Hetzner
+  const [availability, setAvailability] = useState<AvailabilityData | null>(null)
+  const [availLoading, setAvailLoading] = useState(true)
+
   // Form state
   const [name, setName] = useState("")
-  const [region, setRegion] = useState("eu-central")
-  const [tier, setTier] = useState("standard")
+  const [region, setRegion] = useState("")
+  const [tier, setTier] = useState("")
   const [apiKey, setApiKey] = useState("")
+
+  // Fetch live availability on mount
+  useEffect(() => {
+    fetch("/api/hetzner/availability")
+      .then((r) => r.json())
+      .then((data: AvailabilityData) => {
+        setAvailability(data)
+        // Default to first location
+        if (data.locations.length > 0 && !region) {
+          setRegion(data.locations[0].region)
+        }
+      })
+      .catch((err) => console.error("Failed to load availability:", err))
+      .finally(() => setAvailLoading(false))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-select first available tier when region changes
+  useEffect(() => {
+    if (!availability) return
+    const loc = availability.locations.find((l) => l.region === region)
+    if (!loc) return
+    const availTiers = Object.keys(loc.tiers)
+    if (availTiers.length > 0 && (!tier || !loc.tiers[tier])) {
+      setTier(availTiers.includes("standard") ? "standard" : availTiers[0])
+    }
+  }, [region, availability]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Helper: get current location & tier option
+  const currentLocation = availability?.locations.find((l) => l.region === region)
+  const currentTierOption = currentLocation?.tiers[tier]
 
   // Poll agent status once deploying
   useEffect(() => {
@@ -138,7 +194,12 @@ export function DeployWizardClient() {
       const orderRes = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier, agentName: name.trim() || "OpenClaw Agent" }),
+        body: JSON.stringify({
+          tier,
+          region,
+          priceInr: currentTierOption?.priceInr,
+          agentName: name.trim() || "OpenClaw Agent",
+        }),
       })
 
       if (!orderRes.ok) {
@@ -304,61 +365,109 @@ export function DeployWizardClient() {
           {step === 1 && (
             <div className="space-y-3">
               <p className="mb-1 text-[13px] font-semibold text-neutral-700">Select region</p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {regions.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setRegion(r.id)}
-                    className={cn(
-                      "relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all",
-                      region === r.id
-                        ? "border-neutral-900 bg-white shadow-md"
-                        : "border-neutral-200 bg-white hover:border-neutral-300"
-                    )}
-                  >
-                    {region === r.id && (
-                      <BorderBeam size={60} borderWidth={1.5} colorFrom="#f97316" colorTo="#fbbf24" />
-                    )}
-                    <div className="mb-2 text-[28px]">{r.flag}</div>
-                    <p className="text-[14px] font-bold text-neutral-900">{r.label}</p>
-                    <p className="text-[11px] text-neutral-400">{r.latency} from you</p>
-                  </button>
-                ))}
-              </div>
+              {availLoading ? (
+                <div className="flex items-center justify-center gap-2 py-12 text-neutral-400">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-[13px]">Loading available regions…</span>
+                </div>
+              ) : !availability || availability.locations.length === 0 ? (
+                <p className="py-8 text-center text-[13px] text-red-500">
+                  Could not load regions. Please refresh the page.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {availability.locations.map((loc) => {
+                    const cheapest = Object.values(loc.tiers).reduce(
+                      (min, t) => (t.priceInr < min ? t.priceInr : min),
+                      Infinity,
+                    )
+                    return (
+                      <button
+                        key={loc.region}
+                        onClick={() => setRegion(loc.region)}
+                        className={cn(
+                          "relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all",
+                          region === loc.region
+                            ? "border-neutral-900 bg-white shadow-md"
+                            : "border-neutral-200 bg-white hover:border-neutral-300",
+                        )}
+                      >
+                        {region === loc.region && (
+                          <BorderBeam size={60} borderWidth={1.5} colorFrom="#f97316" colorTo="#fbbf24" />
+                        )}
+                        <img
+                          src={`https://flagcdn.com/w80/${loc.country}.png`}
+                          alt={loc.label}
+                          className="mb-2 h-7 w-auto rounded-sm"
+                        />
+                        <p className="text-[14px] font-bold text-neutral-900">{loc.label}</p>
+                        <p className="text-[11px] text-neutral-400">
+                          {loc.id === "fsn1" ? "Germany, EU" : loc.id === "ash" ? "Virginia, US" : loc.id === "sin" ? "Asia Pacific" : loc.id}
+                        </p>
+                        <p className="mt-1 text-[11px] font-medium text-orange-600">
+                          from {formatInr(cheapest)}/mo
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-3">
-              <p className="mb-1 text-[13px] font-semibold text-neutral-700">Select plan</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {tiers.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTier(t.id)}
-                    className={cn(
-                      "relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all",
-                      tier === t.id
-                        ? "border-neutral-900 bg-white shadow-md"
-                        : "border-neutral-200 bg-white hover:border-neutral-300"
-                    )}
-                  >
-                    {tier === t.id && (
-                      <BorderBeam size={80} borderWidth={1.5} colorFrom="#f97316" colorTo="#fbbf24" />
-                    )}
-                    {t.popular && (
-                      <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
-                        Popular
-                      </span>
-                    )}
-                    <p className="text-[20px] font-black text-neutral-900">{t.price}</p>
-                    <p className="text-[12px] font-medium text-neutral-500">/month</p>
-                    <p className="mt-2 text-[13px] font-bold text-neutral-700">{t.label}</p>
-                    <p className="text-[11px] text-neutral-400">{t.specs}</p>
-                    <p className="mt-1 text-[11px] text-neutral-400">{t.desc}</p>
-                  </button>
-                ))}
-              </div>
+              <p className="mb-1 text-[13px] font-semibold text-neutral-700">
+                Select plan
+                {currentLocation && (
+                  <span className="ml-2 font-normal text-neutral-400">
+                    — {currentLocation.label} pricing
+                  </span>
+                )}
+              </p>
+              {!currentLocation ? (
+                <p className="py-8 text-center text-[13px] text-red-500">
+                  No plans available for selected region.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {Object.entries(currentLocation.tiers).map(([tierId, tierOpt]) => {
+                    const meta = TIER_LABELS[tierId]
+                    if (!meta) return null
+                    return (
+                      <button
+                        key={tierId}
+                        onClick={() => setTier(tierId)}
+                        className={cn(
+                          "relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all",
+                          tier === tierId
+                            ? "border-neutral-900 bg-white shadow-md"
+                            : "border-neutral-200 bg-white hover:border-neutral-300",
+                        )}
+                      >
+                        {tier === tierId && (
+                          <BorderBeam size={80} borderWidth={1.5} colorFrom="#f97316" colorTo="#fbbf24" />
+                        )}
+                        {meta.popular && (
+                          <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+                            Popular
+                          </span>
+                        )}
+                        <p className="text-[20px] font-black text-neutral-900">
+                          {formatInr(tierOpt.priceInr)}
+                        </p>
+                        <p className="text-[12px] font-medium text-neutral-500">/month</p>
+                        <p className="mt-2 text-[13px] font-bold text-neutral-700">{meta.label}</p>
+                        <p className="text-[11px] text-neutral-400">
+                          {tierOpt.cores} vCPU · {tierOpt.memory} GB · {tierOpt.disk} GB
+                          {tierOpt.architecture === "arm" && " · ARM"}
+                        </p>
+                        <p className="mt-1 text-[11px] text-neutral-400">{meta.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -381,9 +490,18 @@ export function DeployWizardClient() {
               <p className="text-[12px] text-neutral-400">
                 OpenAI or Anthropic key. You can configure this later in OpenClaw as well.
               </p>
-              <p className="text-[12px] font-medium text-orange-600">
-                Next step will open secure Razorpay checkout for your selected plan.
-              </p>
+              {currentTierOption && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                  <p className="text-[12px] font-medium text-orange-700">
+                    You&apos;ll be charged <span className="font-bold">{formatInr(currentTierOption.priceInr)}/mo</span> via
+                    Razorpay for {TIER_LABELS[tier]?.label ?? tier} in {currentLocation?.label}.
+                  </p>
+                  <p className="mt-1 text-[11px] text-orange-600">
+                    {currentTierOption.cores} vCPU · {currentTierOption.memory} GB RAM · {currentTierOption.disk} GB SSD
+                    {currentTierOption.architecture === "arm" ? " · ARM" : " · x86"}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

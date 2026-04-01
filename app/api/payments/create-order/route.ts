@@ -15,6 +15,8 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const tier = body?.tier as BillingTier;
+  const region = (body?.region as string) ?? "eu-central";
+  const priceInr = body?.priceInr as number | undefined;
   const agentName = (body?.agentName as string | undefined)?.trim() || "OpenClaw Agent";
 
   if (!ALLOWED_TIERS.includes(tier)) {
@@ -25,6 +27,8 @@ export async function POST(request: Request) {
     const order = await createRazorpayOrder({
       userId: session.user.id,
       tier,
+      region,
+      priceInr,
       agentName,
     });
 

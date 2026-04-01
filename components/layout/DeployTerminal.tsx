@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react"
 const lines = [
   { text: "$ fireclaw deploy --tier standard --region eu", delay: 0, color: "text-green-400" },
   { text: "  Creating VPS from snapshot…", delay: 800, color: "text-neutral-400" },
-  { text: "  ✓ VPS provisioned (cx32 · 4 vCPU · 8 GB RAM)", delay: 2200, color: "text-emerald-400" },
+  { text: "  ✓ VPS provisioned (cx33 · 4 vCPU · 8 GB RAM)", delay: 2200, color: "text-emerald-400" },
   { text: "  ✓ DNS record → john-abc123.fireclaw.ai", delay: 3000, color: "text-emerald-400" },
   { text: "  ✓ SSL certificate provisioned", delay: 3600, color: "text-emerald-400" },
   { text: "  ✓ OpenClaw gateway started on :18789", delay: 4200, color: "text-emerald-400" },

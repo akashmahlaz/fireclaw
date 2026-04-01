@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
   const agentId = agent._id!.toString();
 
   // Provision VPS with OpenClaw in the background — don't block the response
+  console.log(`[deploy] Agent ${agentId}: starting background provisioning (region=${region || "eu-central"}, tier=${agentTier}, hasApiKey=${!!apiKey})`);
   provisionAgent({
     agentId,
     userId,
@@ -57,24 +58,28 @@ export async function POST(request: NextRequest) {
     anthropicApiKey: aiProvider === "anthropic" ? apiKey || undefined : undefined,
   })
     .then(async ({ gatewayToken, serverIp, domain }) => {
+      console.log(`[deploy] Agent ${agentId}: provision returned — ip=${serverIp}, domain=${domain}`);
       await updateAgent(agentId, userId, { gatewayToken });
 
       // Wait for OpenClaw to come online (health check)
-      await pushProvisionLog(agentId, "Waiting for OpenClaw to start", "pending");
-      const healthy = await waitForHealth(serverIp);
+      await pushProvisionLog(agentId, "Waiting for OpenClaw Gateway to start", "pending");
+      const healthy = await waitForHealth(serverIp, agentId);
 
       if (healthy) {
-        await pushProvisionLog(agentId, "Health check passed (200 OK)", "ok");
+        await pushProvisionLog(agentId, "Health check passed — OpenClaw Gateway responding", "ok");
         await pushProvisionLog(agentId, `🚀 Live at https://${domain}`, "ok");
         await updateAgent(agentId, userId, { status: "running" });
+        console.log(`[deploy] Agent ${agentId}: ✅ RUNNING at https://${domain}`);
       } else {
-        await pushProvisionLog(agentId, "Health check timed out — server may still be booting", "error");
+        await pushProvisionLog(agentId, "Health check timed out (5 min) — server may still be booting", "error");
+        await pushProvisionLog(agentId, `Try: ssh root@${serverIp} then docker compose -f /opt/openclaw/docker-compose.yml logs`, "error");
         await updateAgent(agentId, userId, { status: "error" });
+        console.error(`[deploy] Agent ${agentId}: ❌ Health check TIMED OUT — ip=${serverIp}`);
       }
     })
     .catch(async (err) => {
-      console.error(`Failed to provision agent ${agentId}:`, err);
-      await pushProvisionLog(agentId, `Error: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
+      console.error(`[deploy] Agent ${agentId}: ❌ PROVISION FAILED:`, err);
+      await pushProvisionLog(agentId, `Provisioning error: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
       await updateAgent(agentId, userId, { status: "error" });
     });
 

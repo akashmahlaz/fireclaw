@@ -3,13 +3,52 @@ import { createServer, deleteServer, getServer, rebootServer } from "./hetzner";
 import { createDNSRecord, deleteDNSRecord, generateSubdomain } from "./cloudflare";
 import { updateAgent, pushProvisionLog } from "./agents";
 
-/** Map tier → Hetzner server type */
-const TIER_SERVER_MAP: Record<string, string> = {
-  starter: "cx22",     // 2 vCPU, 4 GB RAM  — ~€3.49/mo
-  standard: "cx32",    // 4 vCPU, 8 GB RAM  — ~€6.49/mo
-  pro: "cx42",         // 8 vCPU, 16 GB RAM — ~€14.49/mo
-  enterprise: "cx52",  // 16 vCPU, 32 GB RAM— ~€28.49/mo
+/** Map tier + location → Hetzner server type.
+ *
+ * CX  = Cost-Optimized Intel/AMD — EU only (fsn1, hel1, nbg1)
+ * CAX = Ampere ARM — EU + US-East (ash)
+ * CPX = Shared Intel/AMD — All locations including Singapore (sin)
+ *
+ * We pick the cheapest family available at each location.
+ */
+const TIER_SERVER_MAP: Record<string, Record<string, string>> = {
+  starter: {
+    fsn1: "cx23",   // 2c/4GB/40GB   €4.99
+    hel1: "cx23",
+    nbg1: "cx23",
+    ash:  "cax11",  // 2c/4GB/40GB   €3.99
+    hil:  "cpx11",  // 2c/2GB/40GB   €6.99 (only 2GB — closest match)
+    sin:  "cpx21",  // 3c/4GB/80GB   €21.99
+  },
+  standard: {
+    fsn1: "cx33",   // 4c/8GB/80GB   €7.99
+    hel1: "cx33",
+    nbg1: "cx33",
+    ash:  "cax21",  // 4c/8GB/80GB   €6.99
+    hil:  "cpx31",  // 4c/8GB/160GB  €24.99
+    sin:  "cpx31",  // 4c/8GB/160GB  €38.49
+  },
+  pro: {
+    fsn1: "cx43",   // 8c/16GB/160GB €13.99
+    hel1: "cx43",
+    nbg1: "cx43",
+    ash:  "cax31",  // 8c/16GB/160GB €13.49
+    hil:  "cpx41",  // 8c/16GB/240GB €46.49
+    sin:  "cpx41",  // 8c/16GB/240GB €65.49
+  },
+  enterprise: {
+    fsn1: "cx53",   // 16c/32GB/320GB €26.49
+    hel1: "cx53",
+    nbg1: "cx53",
+    ash:  "cax41",  // 16c/32GB/320GB €26.99
+    hil:  "cpx51",  // 16c/32GB/360GB €92.49
+    sin:  "cpx51",  // 16c/32GB/360GB €117.99
+  },
 };
+
+function resolveServerType(tier: string, location: string): string {
+  return TIER_SERVER_MAP[tier]?.[location] ?? TIER_SERVER_MAP.starter?.[location] ?? "cx23";
+}
 
 /**
  * Generates a cloud-init script that provisions a VPS with:
@@ -166,16 +205,21 @@ export async function provisionAgent(opts: {
   const domain = `${subdomain}.${process.env.AGENT_BASE_DOMAIN ?? "fireclaw.ai"}`;
 
   // Map regions to Hetzner locations
+  // Docs: https://docs.hetzner.com/cloud/general/locations/
+  // Valid: fsn1, nbg1, hel1, ash, hil, sin
   const locationMap: Record<string, string> = {
     "eu-central": "fsn1",
     "eu-west": "hel1",
     "us-east": "ash",
     "us-west": "hil",
-    "ap-south": "sin1",
-    "ap-southeast": "sin1",
+    "ap-south": "sin",
+    "ap-southeast": "sin",
   };
   const location = locationMap[opts.region ?? "eu-central"] ?? "fsn1";
-  const serverType = TIER_SERVER_MAP[opts.tier ?? "starter"] ?? "cx22";
+  const serverType = resolveServerType(opts.tier ?? "starter", location);
+
+  console.log(`[provision] Agent ${opts.agentId}: region=${opts.region} → location=${location}, tier=${opts.tier} → serverType=${serverType}`);
+  console.log(`[provision] Agent ${opts.agentId}: subdomain=${subdomain}, domain=${domain}`);
 
   const userData = buildCloudInit({
     gatewayToken,
@@ -183,28 +227,50 @@ export async function provisionAgent(opts: {
     openaiApiKey: opts.openaiApiKey,
     anthropicApiKey: opts.anthropicApiKey,
   });
+  console.log(`[provision] Agent ${opts.agentId}: cloud-init script generated (${userData.length} bytes)`);
 
   // Log: Starting
-  await pushProvisionLog(opts.agentId, "Payment verified", "ok");
+  await pushProvisionLog(opts.agentId, "Payment verified — starting provisioning", "ok");
 
   // 1. Create Hetzner VPS
-  await pushProvisionLog(opts.agentId, "Creating VPS on Hetzner", "pending");
-  const server = await createServer({
-    name: `fireclaw-${opts.agentId}`,
-    serverType,
-    image: "ubuntu-24.04",
-    location,
-    userData,
-  });
+  console.log(`[provision] Agent ${opts.agentId}: calling Hetzner createServer(name=fireclaw-${opts.agentId}, type=${serverType}, image=ubuntu-24.04, location=${location})`);
+  await pushProvisionLog(opts.agentId, `Creating ${serverType} VPS in ${location}`, "pending");
+  let server;
+  try {
+    server = await createServer({
+      name: `fireclaw-${opts.agentId}`,
+      serverType,
+      image: "ubuntu-24.04",
+      location,
+      userData,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[provision] Agent ${opts.agentId}: Hetzner createServer FAILED:`, msg);
+    await pushProvisionLog(opts.agentId, `Hetzner error: ${msg}`, "error");
+    throw err;
+  }
   const serverIp = server.public_net.ipv4.ip;
-  await pushProvisionLog(opts.agentId, `VPS created — ${serverType} in ${location} (IP: ${serverIp})`, "ok");
+  console.log(`[provision] Agent ${opts.agentId}: VPS created — id=${server.id}, ip=${serverIp}, type=${server.server_type.name}, dc=${server.datacenter.name}`);
+  await pushProvisionLog(opts.agentId, `VPS online — ${server.server_type.name} in ${server.datacenter.name} (IP: ${serverIp})`, "ok");
 
   // 2. Create Cloudflare DNS record
-  await pushProvisionLog(opts.agentId, `Creating DNS: ${domain}`, "pending");
-  const dnsRecord = await createDNSRecord(subdomain, serverIp);
-  await pushProvisionLog(opts.agentId, `DNS record created → ${domain}`, "ok");
+  console.log(`[provision] Agent ${opts.agentId}: creating Cloudflare DNS A record: ${subdomain} → ${serverIp}`);
+  await pushProvisionLog(opts.agentId, `Creating DNS: ${domain} → ${serverIp}`, "pending");
+  let dnsRecord;
+  try {
+    dnsRecord = await createDNSRecord(subdomain, serverIp);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[provision] Agent ${opts.agentId}: Cloudflare DNS FAILED:`, msg);
+    await pushProvisionLog(opts.agentId, `DNS error: ${msg}`, "error");
+    throw err;
+  }
+  console.log(`[provision] Agent ${opts.agentId}: DNS created — recordId=${dnsRecord.id}, ${domain} → ${serverIp}`);
+  await pushProvisionLog(opts.agentId, `DNS live → ${domain}`, "ok");
 
   // 3. Update agent record
+  console.log(`[provision] Agent ${opts.agentId}: updating agent record with server info`);
   await updateAgent(opts.agentId, opts.userId, {
     serverId: String(server.id),
     serverIp,
@@ -212,9 +278,11 @@ export async function provisionAgent(opts: {
     dnsRecordId: dnsRecord.id,
     status: "provisioning",
   });
+  await pushProvisionLog(opts.agentId, "Agent record updated with server info", "ok");
 
   // 4. Wait for cloud-init to finish + OpenClaw to come online
-  await pushProvisionLog(opts.agentId, "Installing Docker + OpenClaw (cloud-init)", "pending");
+  console.log(`[provision] Agent ${opts.agentId}: waiting for cloud-init (Docker + Caddy + OpenClaw)...`);
+  await pushProvisionLog(opts.agentId, "Waiting for Docker + OpenClaw install (cloud-init ~2-4 min)", "pending");
 
   return {
     serverId: String(server.id),
@@ -231,21 +299,38 @@ export async function provisionAgent(opts: {
  */
 export async function waitForHealth(
   serverIp: string,
-  timeoutMs = 180_000
+  agentId: string,
+  timeoutMs = 300_000
 ): Promise<boolean> {
   const start = Date.now();
+  let attempt = 0;
+  console.log(`[health] Agent ${agentId}: starting health poll at http://${serverIp}/healthz (timeout ${timeoutMs / 1000}s)`);
+
   while (Date.now() - start < timeoutMs) {
+    attempt++;
+    const elapsed = Math.round((Date.now() - start) / 1000);
     try {
-      // Caddy on port 80 proxies to OpenClaw :18789 (which is bound to 127.0.0.1)
       const res = await fetch(`http://${serverIp}/healthz`, {
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(8000),
       });
-      if (res.ok) return true;
-    } catch {
-      // Not ready yet
+      console.log(`[health] Agent ${agentId}: attempt #${attempt} (${elapsed}s) → ${res.status} ${res.statusText}`);
+      if (res.ok) {
+        console.log(`[health] Agent ${agentId}: HEALTHY after ${elapsed}s (${attempt} attempts)`);
+        return true;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`[health] Agent ${agentId}: attempt #${attempt} (${elapsed}s) → ${msg}`);
     }
+
+    // Log progress to the user every 30s
+    if (attempt % 3 === 0) {
+      await pushProvisionLog(agentId, `Still waiting for OpenClaw… (${elapsed}s elapsed)`, "pending");
+    }
+
     await new Promise((r) => setTimeout(r, 10_000));
   }
+  console.error(`[health] Agent ${agentId}: TIMED OUT after ${timeoutMs / 1000}s (${attempt} attempts)`);
   return false;
 }
 
