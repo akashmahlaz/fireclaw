@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, template, region, tier } = body;
+  const { name, template, region, tier, apiKey, aiProvider } = body;
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return Response.json({ error: "Name is required" }, { status: 400 });
@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
     name: name.trim(),
     region: region || "eu-central",
     tier: agentTier,
+    openaiApiKey: aiProvider === "anthropic" ? undefined : apiKey || undefined,
+    anthropicApiKey: aiProvider === "anthropic" ? apiKey || undefined : undefined,
   })
     .then(async ({ gatewayToken }) => {
       await updateAgent(agentId, userId, { gatewayToken });

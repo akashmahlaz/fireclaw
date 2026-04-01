@@ -165,6 +165,7 @@ export async function provisionAgent(opts: {
     "eu-west": "hel1",
     "us-east": "ash",
     "us-west": "hil",
+    "ap-south": "sin1",
     "ap-southeast": "sin1",
   };
   const location = locationMap[opts.region ?? "eu-central"] ?? "fsn1";

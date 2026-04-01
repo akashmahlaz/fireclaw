@@ -23,6 +23,27 @@ import {
 import { Confetti, type ConfettiRef } from "@/components/ui/confetti"
 import { useRef } from "react"
 
+declare global {
+  interface Window {
+    Razorpay?: new (options: {
+      key: string
+      amount: number
+      currency: string
+      name: string
+      description: string
+      order_id: string
+      prefill?: { name?: string; email?: string; contact?: string }
+      theme?: { color?: string }
+      handler: (response: {
+        razorpay_order_id: string
+        razorpay_payment_id: string
+        razorpay_signature: string
+      }) => void
+      modal?: { ondismiss?: () => void }
+    }) => { open: () => void }
+  }
+}
+
 const steps = ["Name", "Region", "Tier", "API Key", "Deploy"]
 
 const regions = [
@@ -43,6 +64,8 @@ export function DeployWizardClient() {
   const confettiRef = useRef<ConfettiRef>(null)
   const [step, setStep] = useState(0)
   const [deploying, setDeploying] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [paymentVerified, setPaymentVerified] = useState(false)
   const [deployed, setDeployed] = useState(false)
   const [agentId, setAgentId] = useState<string | null>(null)
 
@@ -51,6 +74,88 @@ export function DeployWizardClient() {
   const [region, setRegion] = useState("eu-central")
   const [tier, setTier] = useState("standard")
   const [apiKey, setApiKey] = useState("")
+
+  const loadRazorpayScript = useCallback(async () => {
+    if (window.Razorpay) return true
+
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script")
+      script.src = "https://checkout.razorpay.com/v1/checkout.js"
+      script.async = true
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error("Failed to load Razorpay"))
+      document.body.appendChild(script)
+    })
+
+    return !!window.Razorpay
+  }, [])
+
+  const startPayment = useCallback(async () => {
+    setPaying(true)
+    try {
+      const scriptReady = await loadRazorpayScript()
+      if (!scriptReady || !window.Razorpay) {
+        throw new Error("Razorpay SDK failed to load")
+      }
+
+      const orderRes = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier, agentName: name.trim() || "OpenClaw Agent" }),
+      })
+
+      if (!orderRes.ok) {
+        throw new Error("Could not create payment order")
+      }
+
+      const order = await orderRes.json()
+      const RazorpayCtor = window.Razorpay
+      if (!RazorpayCtor) {
+        throw new Error("Razorpay SDK unavailable")
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const instance = new RazorpayCtor({
+          key: order.keyId,
+          amount: order.amount,
+          currency: order.currency,
+          name: "FireClaw",
+          description: `${tier.toUpperCase()} plan deployment`,
+          order_id: order.id,
+          theme: { color: "#f97316" },
+          handler: async (response) => {
+            try {
+              const verifyRes = await fetch("/api/payments/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature,
+                }),
+              })
+
+              if (!verifyRes.ok) {
+                throw new Error("Payment verification failed")
+              }
+
+              setPaymentVerified(true)
+              resolve()
+            } catch (error) {
+              reject(error)
+            }
+          },
+          modal: {
+            ondismiss: () => reject(new Error("Payment cancelled")),
+          },
+        })
+
+        instance.open()
+      })
+    } finally {
+      setPaying(false)
+    }
+  }, [loadRazorpayScript, name, tier])
 
   const canNext = () => {
     if (step === 0) return name.trim().length > 0
@@ -70,6 +175,8 @@ export function DeployWizardClient() {
           name: name.trim(),
           template: "custom",
           region,
+          tier,
+          apiKey: apiKey.trim(),
         }),
       })
       if (!res.ok) throw new Error("Deploy failed")
@@ -84,12 +191,19 @@ export function DeployWizardClient() {
     } finally {
       setDeploying(false)
     }
-  }, [name, region])
+  }, [name, region, tier, apiKey])
 
   const goNext = () => {
     if (step === 3) {
-      setStep(4)
-      handleDeploy()
+      ;(async () => {
+        try {
+          await startPayment()
+          setStep(4)
+          await handleDeploy()
+        } catch {
+          alert("Payment did not complete. Please try again.")
+        }
+      })()
     } else {
       setStep((s) => s + 1)
     }
@@ -231,7 +345,10 @@ export function DeployWizardClient() {
                 />
               </label>
               <p className="text-[12px] text-neutral-400">
-                OpenAI or Anthropic key. You can also configure this later in the OpenClaw dashboard via LiteLLM settings.
+                OpenAI or Anthropic key. You can configure this later in OpenClaw as well.
+              </p>
+              <p className="text-[12px] font-medium text-orange-600">
+                Next step will open secure Razorpay checkout for your selected plan.
               </p>
             </div>
           )}
@@ -242,6 +359,12 @@ export function DeployWizardClient() {
                 <TypingAnimation className="text-green-400">
                   {`> fireclaw deploy "${name}" --region ${region} --tier ${tier}`}
                 </TypingAnimation>
+
+                <AnimatedSpan className="text-emerald-400">
+                  <span>
+                    {paymentVerified ? "  ✓ Payment verified" : "  … Waiting for payment verification"}
+                  </span>
+                </AnimatedSpan>
 
                 <AnimatedSpan className="text-neutral-500">
                   <span>  Provisioning dedicated VPS...</span>
@@ -332,8 +455,8 @@ export function DeployWizardClient() {
               >
                 {step === 3 ? (
                   <>
-                    <Rocket className="size-3.5" />
-                    Deploy
+                    {paying ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
+                    {paying ? "Opening Payment" : "Pay & Deploy"}
                   </>
                 ) : (
                   <>
