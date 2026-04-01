@@ -17,6 +17,8 @@ export interface Agent {
   region: string;
   tier: "starter" | "standard" | "pro" | "enterprise";
   messageCount: number;
+  /** Step-by-step provisioning log for real-time UI */
+  provisionLog?: { step: string; status: "ok" | "pending" | "error"; ts: number }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +71,22 @@ export async function updateAgent(
     { $set: { ...update, updatedAt: new Date() } }
   );
   return result.modifiedCount === 1;
+}
+
+/** Push a step to the agent's provisionLog array */
+export async function pushProvisionLog(
+  id: string,
+  step: string,
+  status: "ok" | "pending" | "error"
+): Promise<void> {
+  if (!ObjectId.isValid(id)) return;
+  await agents().updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $push: { provisionLog: { step, status, ts: Date.now() } } as never,
+      $set: { updatedAt: new Date() },
+    }
+  );
 }
 
 export async function deleteAgent(id: string, userId: string): Promise<boolean> {

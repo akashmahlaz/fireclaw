@@ -10,6 +10,17 @@ const TIER_PRICE_INR_PAISE: Record<BillingTier, number> = {
   enterprise: 599900,
 };
 
+/**
+ * When RAZORPAY_TEST_AMOUNT is set (e.g. "100" for ₹1),
+ * all orders use that amount instead of real tier pricing.
+ * Remove this env var for production.
+ */
+function getAmount(tier: BillingTier): number {
+  const testAmount = process.env.RAZORPAY_TEST_AMOUNT;
+  if (testAmount) return Number(testAmount);
+  return TIER_PRICE_INR_PAISE[tier];
+}
+
 function getKeyId() {
   const keyId = process.env.RAZORPAY_KEY_ID;
   if (!keyId) throw new Error("Missing RAZORPAY_KEY_ID");
@@ -30,7 +41,7 @@ function getClient() {
 }
 
 export function getTierAmount(tier: BillingTier): number {
-  return TIER_PRICE_INR_PAISE[tier];
+  return getAmount(tier);
 }
 
 export async function createRazorpayOrder(opts: {
@@ -38,7 +49,7 @@ export async function createRazorpayOrder(opts: {
   tier: BillingTier;
   agentName: string;
 }) {
-  const amount = getTierAmount(opts.tier);
+  const amount = getAmount(opts.tier);
   const client = getClient();
 
   const order = await client.orders.create({

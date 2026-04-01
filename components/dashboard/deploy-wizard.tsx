@@ -1,27 +1,21 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Rocket,
   ArrowRight,
   ArrowLeft,
-  Globe,
-  Server,
   Key,
   CheckCircle2,
   Loader2,
+  Circle,
+  XCircle,
 } from "lucide-react"
 import { BlurFade } from "@/components/ui/blur-fade"
 import { BorderBeam } from "@/components/ui/border-beam"
 import { cn } from "@/lib/utils"
-import {
-  AnimatedSpan,
-  Terminal,
-  TypingAnimation,
-} from "@/components/ui/terminal"
 import { Confetti, type ConfettiRef } from "@/components/ui/confetti"
-import { useRef } from "react"
 
 declare global {
   interface Window {
@@ -42,6 +36,12 @@ declare global {
       modal?: { ondismiss?: () => void }
     }) => { open: () => void }
   }
+}
+
+interface ProvisionLogEntry {
+  step: string
+  status: "ok" | "pending" | "error"
+  ts: number
 }
 
 const steps = ["Name", "Region", "Tier", "API Key", "Deploy"]
@@ -65,15 +65,52 @@ export function DeployWizardClient() {
   const [step, setStep] = useState(0)
   const [deploying, setDeploying] = useState(false)
   const [paying, setPaying] = useState(false)
-  const [paymentVerified, setPaymentVerified] = useState(false)
   const [deployed, setDeployed] = useState(false)
+  const [deployError, setDeployError] = useState<string | null>(null)
   const [agentId, setAgentId] = useState<string | null>(null)
+  const [agentDomain, setAgentDomain] = useState<string | null>(null)
+  const [provisionLog, setProvisionLog] = useState<ProvisionLogEntry[]>([])
 
   // Form state
   const [name, setName] = useState("")
   const [region, setRegion] = useState("eu-central")
   const [tier, setTier] = useState("standard")
   const [apiKey, setApiKey] = useState("")
+
+  // Poll agent status once deploying
+  useEffect(() => {
+    if (!agentId || deployed || deployError) return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/agents/${agentId}`)
+        if (!res.ok) return
+        const agent = await res.json()
+
+        if (agent.provisionLog) {
+          setProvisionLog(agent.provisionLog)
+        }
+        if (agent.domain) {
+          setAgentDomain(agent.domain)
+        }
+
+        if (agent.status === "running") {
+          setDeployed(true)
+          setDeploying(false)
+          clearInterval(interval)
+          setTimeout(() => confettiRef.current?.fire({}), 500)
+        } else if (agent.status === "error") {
+          setDeployError("Provisioning failed. Check logs below.")
+          setDeploying(false)
+          clearInterval(interval)
+        }
+      } catch {
+        // Ignore transient fetch errors
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [agentId, deployed, deployError])
 
   const loadRazorpayScript = useCallback(async () => {
     if (window.Razorpay) return true
@@ -139,7 +176,6 @@ export function DeployWizardClient() {
                 throw new Error("Payment verification failed")
               }
 
-              setPaymentVerified(true)
               resolve()
             } catch (error) {
               reject(error)
@@ -161,12 +197,14 @@ export function DeployWizardClient() {
     if (step === 0) return name.trim().length > 0
     if (step === 1) return !!region
     if (step === 2) return !!tier
-    if (step === 3) return true // API key is optional
+    if (step === 3) return true
     return false
   }
 
   const handleDeploy = useCallback(async () => {
     setDeploying(true)
+    setDeployError(null)
+    setProvisionLog([])
     try {
       const res = await fetch("/api/agents", {
         method: "POST",
@@ -182,13 +220,9 @@ export function DeployWizardClient() {
       if (!res.ok) throw new Error("Deploy failed")
       const data = await res.json()
       setAgentId(data._id)
-      setDeployed(true)
-      setTimeout(() => {
-        confettiRef.current?.fire({})
-      }, 500)
+      // Polling starts via useEffect
     } catch {
-      alert("Deploy failed. Please try again.")
-    } finally {
+      setDeployError("Failed to start deployment. Please try again.")
       setDeploying(false)
     }
   }, [name, region, tier, apiKey])
@@ -355,46 +389,67 @@ export function DeployWizardClient() {
 
           {step === 4 && (
             <div className="space-y-6">
-              <Terminal className="w-full !max-w-none !max-h-none rounded-2xl !border-neutral-800 !bg-neutral-950">
-                <TypingAnimation className="text-green-400">
+              {/* Live provision log */}
+              <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 p-5 font-mono text-[13px] leading-relaxed">
+                <p className="text-green-400">
                   {`> fireclaw deploy "${name}" --region ${region} --tier ${tier}`}
-                </TypingAnimation>
+                </p>
 
-                <AnimatedSpan className="text-emerald-400">
-                  <span>
-                    {paymentVerified ? "  ✓ Payment verified" : "  … Waiting for payment verification"}
-                  </span>
-                </AnimatedSpan>
+                {provisionLog.length === 0 && deploying && (
+                  <p className="mt-3 flex items-center gap-2 text-neutral-500">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Initializing deployment…
+                  </p>
+                )}
 
-                <AnimatedSpan className="text-neutral-500">
-                  <span>  Provisioning dedicated VPS...</span>
-                </AnimatedSpan>
+                {provisionLog.map((entry, i) => (
+                  <p
+                    key={i}
+                    className={cn(
+                      "mt-1",
+                      entry.status === "ok" && "text-emerald-400",
+                      entry.status === "pending" && "text-amber-400",
+                      entry.status === "error" && "text-red-400",
+                    )}
+                  >
+                    {entry.status === "ok" && <CheckCircle2 className="mr-1.5 inline size-3" />}
+                    {entry.status === "pending" && <Circle className="mr-1.5 inline size-3" />}
+                    {entry.status === "error" && <XCircle className="mr-1.5 inline size-3" />}
+                    {entry.step}
+                  </p>
+                ))}
 
-                <AnimatedSpan className="text-emerald-400">
-                  <span>  ✓ VPS created in {regions.find((r) => r.id === region)?.label}</span>
-                </AnimatedSpan>
+                {deploying && provisionLog.length > 0 && (
+                  <p className="mt-2 flex items-center gap-2 text-neutral-500">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Provisioning in progress…
+                  </p>
+                )}
 
-                <AnimatedSpan className="text-emerald-400">
-                  <span>  ✓ Docker + OpenClaw installed</span>
-                </AnimatedSpan>
+                {deployed && (
+                  <p className="mt-3 text-[14px] font-semibold text-white">
+                    🚀 {name} is live!
+                  </p>
+                )}
+              </div>
 
-                <AnimatedSpan className="text-emerald-400">
-                  <span>  ✓ SSL certificate provisioned</span>
-                </AnimatedSpan>
+              {/* Error state */}
+              {deployError && (
+                <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5">
+                  <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
+                  <div>
+                    <p className="text-[14px] font-bold text-red-900">{deployError}</p>
+                    <button
+                      onClick={() => router.push("/dashboard/agents")}
+                      className="mt-2 text-[13px] font-medium text-red-700 underline hover:no-underline"
+                    >
+                      View agent details
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                <AnimatedSpan className="text-emerald-400">
-                  <span>  ✓ Health check passed</span>
-                </AnimatedSpan>
-
-                <AnimatedSpan className="text-white font-semibold">
-                  <span>  🚀 {name} is live!</span>
-                </AnimatedSpan>
-
-                <TypingAnimation className="text-orange-400">
-                  {"  → Open your OpenClaw dashboard to connect channels"}
-                </TypingAnimation>
-              </Terminal>
-
+              {/* Success state */}
               {deployed && (
                 <BlurFade inView delay={0.1}>
                   <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
@@ -402,6 +457,19 @@ export function DeployWizardClient() {
                     <p className="text-[15px] font-bold text-neutral-900">
                       Agent deployed successfully!
                     </p>
+                    {agentDomain && (
+                      <p className="text-[13px] text-neutral-600">
+                        Live at{" "}
+                        <a
+                          href={`https://${agentDomain}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-orange-600 underline"
+                        >
+                          {agentDomain}
+                        </a>
+                      </p>
+                    )}
                     <div className="flex gap-3">
                       <button
                         onClick={() => agentId && router.push(`/dashboard/agents/${agentId}`)}

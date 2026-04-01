@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
-import { createAgent, getAgentsByUser, updateAgent } from "@/lib/agents";
-import { provisionAgent } from "@/lib/provision";
+import { createAgent, getAgentsByUser, updateAgent, pushProvisionLog } from "@/lib/agents";
+import { provisionAgent, waitForHealth } from "@/lib/provision";
 import { NextRequest } from "next/server";
 
 export async function GET() {
@@ -56,11 +56,25 @@ export async function POST(request: NextRequest) {
     openaiApiKey: aiProvider === "anthropic" ? undefined : apiKey || undefined,
     anthropicApiKey: aiProvider === "anthropic" ? apiKey || undefined : undefined,
   })
-    .then(async ({ gatewayToken }) => {
+    .then(async ({ gatewayToken, serverIp, domain }) => {
       await updateAgent(agentId, userId, { gatewayToken });
+
+      // Wait for OpenClaw to come online (health check)
+      await pushProvisionLog(agentId, "Waiting for OpenClaw to start", "pending");
+      const healthy = await waitForHealth(serverIp);
+
+      if (healthy) {
+        await pushProvisionLog(agentId, "Health check passed (200 OK)", "ok");
+        await pushProvisionLog(agentId, `🚀 Live at https://${domain}`, "ok");
+        await updateAgent(agentId, userId, { status: "running" });
+      } else {
+        await pushProvisionLog(agentId, "Health check timed out — server may still be booting", "error");
+        await updateAgent(agentId, userId, { status: "error" });
+      }
     })
     .catch(async (err) => {
       console.error(`Failed to provision agent ${agentId}:`, err);
+      await pushProvisionLog(agentId, `Error: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
       await updateAgent(agentId, userId, { status: "error" });
     });
 

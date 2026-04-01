@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { createServer, deleteServer, getServer, rebootServer } from "./hetzner";
 import { createDNSRecord, deleteDNSRecord, generateSubdomain } from "./cloudflare";
-import { updateAgent } from "./agents";
+import { updateAgent, pushProvisionLog } from "./agents";
 
 /** Map tier → Hetzner server type */
 const TIER_SERVER_MAP: Record<string, string> = {
@@ -24,23 +24,26 @@ function buildCloudInit(opts: {
   anthropicApiKey?: string;
 }): string {
   const compose = `
-version: "3.8"
 services:
-  openclaw:
+  openclaw-gateway:
     image: ghcr.io/openclaw/openclaw:latest
-    container_name: openclaw
+    container_name: openclaw-gateway
     restart: unless-stopped
     ports:
       - "127.0.0.1:18789:18789"
     volumes:
-      - openclaw-data:/home/node/.openclaw
+      - /root/.openclaw:/home/node/.openclaw
+      - /root/.openclaw/workspace:/home/node/.openclaw/workspace
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - HOME=/home/node
+      - NODE_ENV=production
       - OPENCLAW_GATEWAY_TOKEN=\${OPENCLAW_GATEWAY_TOKEN}
       - OPENCLAW_GATEWAY_BIND=lan
-      - OPENCLAW_GATEWAY_MODE=local
+      - OPENCLAW_GATEWAY_PORT=18789
       - OPENAI_API_KEY=\${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=\${ANTHROPIC_API_KEY:-}
+    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789", "--allow-unconfigured"]
 
   caddy:
     image: caddy:2-alpine
@@ -54,17 +57,16 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - openclaw
+      - openclaw-gateway
 
 volumes:
-  openclaw-data:
   caddy-data:
   caddy-config:
 `.trim();
 
   const caddyfile = `
 ${opts.domain} {
-  reverse_proxy openclaw:18789
+  reverse_proxy openclaw-gateway:18789
 }
 `.trim();
 
@@ -90,6 +92,10 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 # ── Create OpenClaw directory ───────────────────────────────────────
 mkdir -p /opt/openclaw
 cd /opt/openclaw
+
+# ── Create persistent state directories ─────────────────────────────
+mkdir -p /root/.openclaw/workspace
+chown -R 1000:1000 /root/.openclaw
 
 # ── Write Docker Compose ────────────────────────────────────────────
 cat > docker-compose.yml << 'COMPOSE_EOF'
@@ -178,7 +184,11 @@ export async function provisionAgent(opts: {
     anthropicApiKey: opts.anthropicApiKey,
   });
 
+  // Log: Starting
+  await pushProvisionLog(opts.agentId, "Payment verified", "ok");
+
   // 1. Create Hetzner VPS
+  await pushProvisionLog(opts.agentId, "Creating VPS on Hetzner", "pending");
   const server = await createServer({
     name: `fireclaw-${opts.agentId}`,
     serverType,
@@ -186,11 +196,13 @@ export async function provisionAgent(opts: {
     location,
     userData,
   });
-
   const serverIp = server.public_net.ipv4.ip;
+  await pushProvisionLog(opts.agentId, `VPS created — ${serverType} in ${location} (IP: ${serverIp})`, "ok");
 
   // 2. Create Cloudflare DNS record
+  await pushProvisionLog(opts.agentId, `Creating DNS: ${domain}`, "pending");
   const dnsRecord = await createDNSRecord(subdomain, serverIp);
+  await pushProvisionLog(opts.agentId, `DNS record created → ${domain}`, "ok");
 
   // 3. Update agent record
   await updateAgent(opts.agentId, opts.userId, {
@@ -200,6 +212,9 @@ export async function provisionAgent(opts: {
     dnsRecordId: dnsRecord.id,
     status: "provisioning",
   });
+
+  // 4. Wait for cloud-init to finish + OpenClaw to come online
+  await pushProvisionLog(opts.agentId, "Installing Docker + OpenClaw (cloud-init)", "pending");
 
   return {
     serverId: String(server.id),
@@ -221,7 +236,8 @@ export async function waitForHealth(
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(`http://${serverIp}:18789/healthz`, {
+      // Caddy on port 80 proxies to OpenClaw :18789 (which is bound to 127.0.0.1)
+      const res = await fetch(`http://${serverIp}/healthz`, {
         signal: AbortSignal.timeout(5000),
       });
       if (res.ok) return true;
