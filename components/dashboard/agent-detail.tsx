@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Copy,
   Check,
+  Wrench,
 } from "lucide-react"
 import { BlurFade } from "@/components/ui/blur-fade"
 import { BorderBeam } from "@/components/ui/border-beam"
@@ -28,6 +29,8 @@ interface AgentDetail {
   region: string
   serverIp: string | null
   serverId: string | null
+  domain: string | null
+  gatewayToken: string | null
   template: string
   messageCount: number
   createdAt: string
@@ -58,9 +61,16 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [configFixed, setConfigFixed] = useState(false)
 
-  const domain = agent.serverIp
-    ? `${agent.name.toLowerCase().replace(/\s+/g, "-")}-${agent.id.slice(-6)}.fireclaw.ai`
+  const domain = agent.domain ?? null
+
+  // Build the dashboard URL with token in fragment (not query) for security
+  // Fragment (#) is never sent to the server, avoiding log/Referer leakage
+  const dashboardUrl = domain
+    ? agent.gatewayToken
+      ? `https://${domain}/#token=${agent.gatewayToken}`
+      : `https://${domain}/`
     : null
 
   const handleAction = async (action: string) => {
@@ -96,6 +106,24 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
       navigator.clipboard.writeText(`https://${domain}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handleFixConfig = async () => {
+    setLoading("fix-config")
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/fix-config`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok) {
+        setConfigFixed(true)
+        alert("Config fix applied! The dashboard should now work. Try opening it again.")
+      } else {
+        alert(`Fix failed: ${data.error ?? "Unknown error"}`)
+      }
+    } catch {
+      alert("Failed to fix config. The server may be unreachable.")
+    } finally {
+      setLoading(null)
     }
   }
 
@@ -152,9 +180,9 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
               </div>
 
               {/* Open OpenClaw Dashboard */}
-              {agent.status === "running" && domain && (
+              {agent.status === "running" && dashboardUrl && (
                 <a
-                  href={`https://${domain}`}
+                  href={dashboardUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-orange-600 active:scale-[0.97]"
@@ -213,6 +241,13 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
                 onClick={() => handleAction("reboot")}
                 loading={loading === "reboot"}
                 disabled={agent.status !== "running"}
+              />
+              <ActionButton
+                icon={Wrench}
+                label={configFixed ? "Config Fixed ✓" : "Fix Config"}
+                onClick={handleFixConfig}
+                loading={loading === "fix-config"}
+                disabled={agent.status !== "running" || configFixed}
               />
               <ActionButton
                 icon={Square}

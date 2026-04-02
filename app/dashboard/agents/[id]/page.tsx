@@ -27,6 +27,8 @@ export default async function AgentDetailPage({
         region: agent.region,
         serverIp: agent.serverIp ?? null,
         serverId: agent.serverId ?? null,
+        domain: agent.domain ?? null,
+        gatewayToken: agent.gatewayToken ?? null,
         template: agent.template,
         messageCount: agent.messageCount,
         createdAt: agent.createdAt.toISOString(),
