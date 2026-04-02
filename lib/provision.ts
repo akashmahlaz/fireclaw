@@ -76,7 +76,10 @@ volumes:
 
   const caddyfile = `
 ${opts.domain} {
-  reverse_proxy openclaw-gateway:18789
+  reverse_proxy openclaw-gateway:18789 {
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Real-IP {remote_host}
+  }
 }
 `.trim();
 
@@ -108,6 +111,9 @@ report() {
 report() { true; }
 `;
 
+  // Docker pull + start is split into a separate systemd service so
+  // it survives if cloud-final.service is killed (Hetzner can SIGTERM
+  // cloud-init before a ~700 MB image pull finishes).
   return `#!/bin/bash
 # Use -uo pipefail but NOT -e: we handle errors manually so failure
 # in one step doesn't silently kill the whole cloud-init.
@@ -151,7 +157,12 @@ cat > /root/.openclaw/openclaw.json << CONFIGEOF
       "token": ${gatewayTokenJson}
     },
     "bind": "lan",
-    "port": 18789
+    "port": 18789,
+    "trustedProxies": ["172.16.0.0/12", "10.0.0.0/8", "127.0.0.1"],
+    "controlUi": {
+      "allowedOrigins": ["https://${opts.domain}"],
+      "dangerouslyDisableDeviceAuth": true
+    }
   }
 }
 CONFIGEOF
@@ -174,6 +185,28 @@ ${envFile}
 ENV_EOF
 chmod 600 .env
 report "📄 Config files written (Compose, Caddy, .env)" "ok"
+
+# ── Setup script (runs in its own systemd service) ──────────────────
+# This is decoupled from cloud-init so it survives cloud-final.service
+# being killed by systemd during a long docker image pull.
+cat > /opt/openclaw/setup.sh << 'SETUP_SCRIPT'
+#!/bin/bash
+set -uo pipefail
+
+# ── Webhook helper (duplicated here since we run in a separate unit) 
+WEBHOOK_URL="${opts.webhookUrl ?? ""}"
+WEBHOOK_SECRET="${opts.webhookSecret ?? ""}"
+report() {
+  [ -z "\$WEBHOOK_URL" ] && return 0
+  local step="\$1"
+  local status="\${2:-ok}"
+  curl -sf -X POST "\$WEBHOOK_URL" \\
+    -H "Content-Type: application/json" \\
+    -d "{\\"secret\\":\\"\$WEBHOOK_SECRET\\",\\"step\\":\\"\$step\\",\\"status\\":\\"\$status\\"}" \\
+    --max-time 5 || true
+}
+
+cd /opt/openclaw
 
 # ── Pull images with retry ──────────────────────────────────────────
 report "⬇️ Pulling Docker images (openclaw + caddy)…" "pending"
@@ -200,7 +233,7 @@ report "🚀 Docker containers started (openclaw + caddy)" "ok"
 
 # ── Wait for gateway to become healthy ──────────────────────────────
 report "⏳ Waiting for OpenClaw Gateway to respond…" "pending"
-for i in $(seq 1 30); do
+for i in \$(seq 1 30); do
   if curl -fsS http://127.0.0.1:18789/healthz >/dev/null 2>&1; then
     report "🩺 Gateway health check passed" "ok"
     break
@@ -218,8 +251,37 @@ ufw allow 443/tcp
 ufw --force enable
 report "🔒 Firewall configured (SSH + HTTP + HTTPS)" "ok"
 
-report "✅ Cloud-init complete — waiting for health check" "ok"
-echo "FireClaw provisioning complete"
+report "✅ Setup complete — agent is online" "ok"
+echo "FireClaw setup complete"
+SETUP_SCRIPT
+chmod +x /opt/openclaw/setup.sh
+
+# ── Systemd service for the heavy Docker pull + start ───────────────
+cat > /etc/systemd/system/fireclaw-setup.service << 'UNIT_EOF'
+[Unit]
+Description=FireClaw Agent Setup (Docker pull + start)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=900
+ExecStart=/opt/openclaw/setup.sh
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+UNIT_EOF
+
+systemctl daemon-reload
+systemctl enable fireclaw-setup.service
+# Start async so cloud-init can exit immediately
+systemctl start fireclaw-setup.service --no-block
+
+report "☁️ Cloud-init done — Docker setup running in background" "ok"
+echo "FireClaw cloud-init complete (setup service started)"
 `;
 }
 
@@ -390,7 +452,8 @@ export async function provisionAgent(opts: {
 export async function waitForHealth(
   domain: string,
   agentId: string,
-  timeoutMs = 600_000
+  timeoutMs = 600_000,
+  serverIp?: string,
 ): Promise<boolean> {
   const start = Date.now();
   let attempt = 0;
@@ -399,23 +462,25 @@ export async function waitForHealth(
     `https://${domain}/healthz`,
     `http://${domain}/healthz`,
   ];
-  console.log(`[health] Agent ${agentId}: starting health poll at ${urls[0]} (timeout ${timeoutMs / 1000}s)`);
+  // IP-based fallback: hit Caddy on port 80 via raw IP (needs Host header)
+  const ipFallbackUrl = serverIp ? `http://${serverIp}/healthz` : null;
+  console.log(`[health] Agent ${agentId}: starting health poll at ${urls[0]} (timeout ${timeoutMs / 1000}s)${ipFallbackUrl ? ` (IP fallback: ${ipFallbackUrl})` : ""}`);
 
   while (Date.now() - start < timeoutMs) {
     attempt++;
     const elapsed = Math.round((Date.now() - start) / 1000);
 
+    // Try domain-based URLs first
+    let domainFailed = true;
     for (const url of urls) {
       try {
         const res = await fetch(url, {
           signal: AbortSignal.timeout(8000),
-          // Don't follow redirects — a 301/302 from Caddy means it's alive
           redirect: "manual",
         });
         console.log(`[health] Agent ${agentId}: attempt #${attempt} (${elapsed}s) ${url} → ${res.status} ${res.statusText}`);
-        // 200 = OpenClaw responding, 301/302 = Caddy alive (HTTP→HTTPS redirect)
+        domainFailed = false;
         if (res.ok || res.status === 301 || res.status === 302) {
-          // If we got a redirect, do one final check on HTTPS to confirm OpenClaw is up
           if (res.status === 301 || res.status === 302) {
             try {
               const httpsRes = await fetch(urls[0], { signal: AbortSignal.timeout(8000) });
@@ -424,7 +489,6 @@ export async function waitForHealth(
                 return true;
               }
             } catch {
-              // HTTPS not ready yet, but Caddy is up — wait a bit more
               console.log(`[health] Agent ${agentId}: Caddy responding but OpenClaw not yet ready`);
             }
           } else {
@@ -432,10 +496,9 @@ export async function waitForHealth(
             return true;
           }
         }
-        break; // Got a response from this URL, don't try the fallback
+        break;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        // Classify the error for better logging
         let reason = "unknown";
         if (msg.includes("ECONNREFUSED") || msg.includes("ECONNRESET")) {
           reason = "connection refused (server booting)";
@@ -448,10 +511,35 @@ export async function waitForHealth(
         } else if (msg.includes("fetch failed")) {
           reason = "no response (VPS still booting)";
         }
-        
-        // Only log once per attempt (for the first URL)
         if (url === urls[0]) {
           console.log(`[health] Agent ${agentId}: attempt #${attempt} (${elapsed}s) → ${reason} (${msg})`);
+        }
+      }
+    }
+
+    // If domain-based URLs all failed (DNS issue), try IP-based fallback via Caddy port 80
+    if (domainFailed && ipFallbackUrl) {
+      try {
+        const res = await fetch(ipFallbackUrl, {
+          signal: AbortSignal.timeout(8000),
+          headers: { Host: domain },
+          redirect: "manual",
+        });
+        console.log(`[health] Agent ${agentId}: IP fallback attempt #${attempt} (${elapsed}s) → ${res.status} ${res.statusText}`);
+        if (res.ok) {
+          console.log(`[health] Agent ${agentId}: HEALTHY (via IP fallback) after ${elapsed}s (${attempt} attempts)`);
+          return true;
+        }
+        // 308 redirect means Caddy is up but redirecting HTTP→HTTPS
+        if (res.status === 301 || res.status === 302 || res.status === 308) {
+          console.log(`[health] Agent ${agentId}: Caddy responding via IP (redirect ${res.status}) — marking healthy`);
+          return true;
+        }
+      } catch (ipErr) {
+        const ipMsg = ipErr instanceof Error ? ipErr.message : String(ipErr);
+        // Only log IP fallback failures at debug level
+        if (attempt <= 3 || attempt % 6 === 0) {
+          console.log(`[health] Agent ${agentId}: IP fallback attempt #${attempt} (${elapsed}s) → ${ipMsg}`);
         }
       }
     }
