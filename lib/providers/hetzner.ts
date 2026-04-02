@@ -33,26 +33,34 @@ import { createServer, deleteServer } from "../hetzner";
 /* ── Configuration ───────────────────────────────────────────────── */
 
 const TIER_DEFS: TierDef[] = [
-  { id: "starter",    label: "Starter",    minCores: 2,  minMemory: 4  },
-  { id: "standard",   label: "Standard",   minCores: 4,  minMemory: 8  },
-  { id: "pro",        label: "Pro",        minCores: 8,  minMemory: 16 },
-  { id: "enterprise", label: "Enterprise", minCores: 16, minMemory: 32 },
+  { id: "starter",    label: "Starter",    minCores: 1,  minMemory: 2  },
+  { id: "standard",   label: "Standard",   minCores: 2,  minMemory: 4  },
+  { id: "pro",        label: "Pro",        minCores: 4,  minMemory: 8  },
+  { id: "enterprise", label: "Enterprise", minCores: 8,  minMemory: 16 },
 ];
 
 /**
  * Server type preference order per tier (cheapest first).
  * Filtered at runtime against the real API `locations[].available` +
  * `datacenters.server_types.available` fields.
+ *
+ * Real Hetzner prices (EUR excl VAT, Apr 2026):
+ *   CX22:  €3.79/mo (1 vCPU, 2GB) — cheapest, IPv6 only by default
+ *   CX23:  €4.49/mo (2 vCPU, 4GB)
+ *   CAX11: €4.99/mo (2 ARM vCPU, 4GB)
+ *   CX33:  €6.99/mo (4 vCPU, 8GB)
+ *   CAX21: €8.49/mo (4 ARM vCPU, 8GB)
  */
 const TYPE_PREFERENCE: Record<string, string[]> = {
-  // Starter: ~2 vCPU, ~4 GB
-  starter:    ["cx23", "cax11", "cpx22", "cpx12", "cpx21", "cpx11", "ccx13"],
-  // Standard: ~4 vCPU, ~8 GB
-  standard:   ["cx33", "cax21", "cpx32", "cpx31", "ccx23"],
-  // Pro: ~8 vCPU, ~16 GB
-  pro:        ["cx43", "cax31", "cpx42", "cpx41", "ccx33"],
-  // Enterprise: ~16 vCPU, ~32 GB
-  enterprise: ["cx53", "cax41", "cpx62", "cpx52", "cpx51", "ccx43"],
+  // Starter: cheapest available (~$4.49-4.99 USD)
+  // CX23 = 2 vCPU 4GB €4.49, CAX11 = 2 ARM vCPU 4GB €4.99
+  starter:    ["cx23", "cax11", "cpx12", "cpx11", "ccx13"],
+  // Standard: 4 vCPU, 8 GB (~$6.99-8.49 USD)
+  standard:   ["cx33", "cax21", "cpx22", "cpx21", "ccx13"],
+  // Pro: 8 vCPU, 16 GB (~$12.49-16.49 USD)
+  pro:        ["cx43", "cax31", "cpx32", "cpx31", "ccx23"],
+  // Enterprise: 16+ vCPU, 32+ GB
+  enterprise: ["cx53", "cax41", "cpx42", "cpx41", "ccx33"],
 };
 
 /** Fallback location ordering by network_zone */
@@ -65,10 +73,10 @@ const ZONE_FALLBACK: Record<string, string[]> = {
 
 /** Our margin in USD per tier */
 const TIER_MARGIN_USD: Record<string, number> = {
-  starter: 1,
-  standard: 3,
-  pro: 7,
-  enterprise: 15,
+  starter: 0,
+  standard: 1,
+  pro: 3,
+  enterprise: 7,
 };
 
 const USD_TO_INR = 84;
@@ -334,7 +342,13 @@ function isRetriableError(msg: string): boolean {
     msg.includes("location disabled") ||
     msg.includes("error during placement") ||
     msg.includes("error 412") ||
-    msg.includes("error 422")
+    msg.includes("error 422") ||
+    // Network-level errors — retry with next type/location
+    msg.includes("fetch failed") ||
+    msg.includes("ECONNRESET") ||
+    msg.includes("ECONNREFUSED") ||
+    msg.includes("ETIMEDOUT") ||
+    msg.includes("socket hang up")
   );
 }
 

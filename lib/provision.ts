@@ -30,15 +30,29 @@ services:
       - /root/.openclaw:/home/node/.openclaw
       - /root/.openclaw/workspace:/home/node/.openclaw/workspace
       - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - .env
     environment:
       - HOME=/home/node
       - NODE_ENV=production
+      - TERM=xterm-256color
       - OPENCLAW_GATEWAY_TOKEN=\${OPENCLAW_GATEWAY_TOKEN}
       - OPENCLAW_GATEWAY_BIND=lan
       - OPENCLAW_GATEWAY_PORT=18789
+      - XDG_CONFIG_HOME=/home/node/.openclaw
       - OPENAI_API_KEY=\${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=\${ANTHROPIC_API_KEY:-}
-    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789", "--allow-unconfigured"]
+    command:
+      [
+        "node",
+        "openclaw.mjs",
+        "gateway",
+        "--bind",
+        "lan",
+        "--port",
+        "18789",
+        "--allow-unconfigured",
+      ]
 
   caddy:
     image: caddy:2-alpine
@@ -52,7 +66,8 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - openclaw-gateway
+      openclaw-gateway:
+        condition: service_started
 
 volumes:
   caddy-data:
@@ -70,6 +85,9 @@ ${opts.domain} {
     `OPENAI_API_KEY=${opts.openaiApiKey ?? ""}`,
     `ANTHROPIC_API_KEY=${opts.anthropicApiKey ?? ""}`,
   ].join("\n");
+
+  // Escape the gateway token for JSON embedding
+  const gatewayTokenJson = JSON.stringify(opts.gatewayToken);
 
   // Build a webhook helper function for the bash script
   const webhookFn = opts.webhookUrl && opts.webhookSecret
@@ -91,7 +109,9 @@ report() { true; }
 `;
 
   return `#!/bin/bash
-set -euo pipefail
+# Use -uo pipefail but NOT -e: we handle errors manually so failure
+# in one step doesn't silently kill the whole cloud-init.
+set -uo pipefail
 ${webhookFn}
 report "☁️ Cloud-init started — installing dependencies" "pending"
 
@@ -108,6 +128,11 @@ apt-get update -y
 report "🔧 Docker repo configured" "ok"
 
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+if ! command -v docker &>/dev/null; then
+  report "❌ Docker install FAILED" "error"
+  echo "ERROR: Docker CE installation failed" >&2
+  exit 1
+fi
 report "🐳 Docker CE + Compose installed" "ok"
 
 # ── Create OpenClaw directory ───────────────────────────────────────
@@ -117,6 +142,21 @@ cd /opt/openclaw
 # ── Create persistent state directories ─────────────────────────────
 mkdir -p /root/.openclaw/workspace
 chown -R 1000:1000 /root/.openclaw
+
+# ── Write initial OpenClaw config ───────────────────────────────────
+cat > /root/.openclaw/openclaw.json << CONFIGEOF
+{
+  "gateway": {
+    "auth": {
+      "token": ${gatewayTokenJson}
+    },
+    "bind": "lan",
+    "port": 18789
+  }
+}
+CONFIGEOF
+chown 1000:1000 /root/.openclaw/openclaw.json
+report "⚙️ OpenClaw config written" "ok"
 
 # ── Write Docker Compose ────────────────────────────────────────────
 cat > docker-compose.yml << 'COMPOSE_EOF'
@@ -135,14 +175,38 @@ ENV_EOF
 chmod 600 .env
 report "📄 Config files written (Compose, Caddy, .env)" "ok"
 
-# ── Pull and start ──────────────────────────────────────────────────
+# ── Pull images with retry ──────────────────────────────────────────
 report "⬇️ Pulling Docker images (openclaw + caddy)…" "pending"
-docker compose pull
+pull_ok=false
+for attempt in 1 2 3; do
+  if docker compose pull 2>&1; then
+    pull_ok=true
+    break
+  fi
+  report "⬇️ Image pull attempt \$attempt failed — retrying in 10s…" "pending"
+  sleep 10
+done
+if [ "\$pull_ok" = false ]; then
+  report "❌ Docker image pull FAILED after 3 attempts" "error"
+  echo "ERROR: docker compose pull failed" >&2
+  exit 1
+fi
 report "⬇️ Docker images pulled" "ok"
 
+# ── Start containers ────────────────────────────────────────────────
 report "🚀 Starting containers…" "pending"
 docker compose up -d
 report "🚀 Docker containers started (openclaw + caddy)" "ok"
+
+# ── Wait for gateway to become healthy ──────────────────────────────
+report "⏳ Waiting for OpenClaw Gateway to respond…" "pending"
+for i in $(seq 1 30); do
+  if curl -fsS http://127.0.0.1:18789/healthz >/dev/null 2>&1; then
+    report "🩺 Gateway health check passed" "ok"
+    break
+  fi
+  sleep 5
+done
 
 # ── Firewall: allow SSH + HTTP + HTTPS only ─────────────────────────
 apt-get install -y ufw
@@ -326,7 +390,7 @@ export async function provisionAgent(opts: {
 export async function waitForHealth(
   domain: string,
   agentId: string,
-  timeoutMs = 300_000
+  timeoutMs = 600_000
 ): Promise<boolean> {
   const start = Date.now();
   let attempt = 0;
@@ -419,7 +483,16 @@ export async function destroyAgent(
   } catch {
     // May fail if server is already gone — ignore
   }
-  await deleteServer(id);
+  try {
+    await deleteServer(id);
+  } catch (err) {
+    // If the server is already gone on Hetzner (404), that's fine — skip
+    if (err instanceof Error && err.message.includes("404")) {
+      console.log(`[provision] Server ${id} already deleted on Hetzner — skipping`);
+    } else {
+      throw err;
+    }
+  }
   if (dnsRecordId) {
     try {
       await deleteDNSRecord(dnsRecordId);

@@ -74,10 +74,10 @@ interface AvailabilityData {
 }
 
 const TIER_LABELS: Record<string, { label: string; desc: string; popular?: boolean }> = {
-  starter: { label: "Starter", desc: "Personal use, light traffic" },
-  standard: { label: "Standard", desc: "Small business, moderate traffic", popular: true },
-  pro: { label: "Pro", desc: "High traffic, multi-channel" },
-  enterprise: { label: "Enterprise", desc: "Agency-level, max performance" },
+  starter: { label: "Starter", desc: "Single agent, light traffic — cheapest" },
+  standard: { label: "Standard", desc: "Personal use, moderate traffic", popular: true },
+  pro: { label: "Pro", desc: "Small business, multi-channel" },
+  enterprise: { label: "Enterprise", desc: "Agency-level, high traffic" },
 }
 
 function formatInr(paise: number): string {
@@ -141,7 +141,7 @@ export function DeployWizardClient() {
     if (!loc) return
     const availTiers = Object.keys(loc.tiers)
     if (availTiers.length > 0 && (!tier || !loc.tiers[tier])) {
-      setTier(availTiers.includes("standard") ? "standard" : availTiers[0])
+      setTier(availTiers.includes("starter") ? "starter" : availTiers[0])
     }
   }, [region, availability]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -480,6 +480,9 @@ export function DeployWizardClient() {
                           {formatUsd(tierOpt.priceUsd)}
                         </p>
                         <p className="text-[12px] font-medium text-neutral-500">/month</p>
+                        <p className="mt-0.5 text-[10px] text-neutral-400">
+                          Hetzner base: ${(tierOpt.providerCostUsd).toFixed(2)}/mo
+                        </p>
                         <p className="mt-2 text-[13px] font-bold text-neutral-700">{meta.label}</p>
                         <p className="text-[11px] text-neutral-400">
                           {tierOpt.cores} vCPU · {tierOpt.memory} GB · {tierOpt.disk} GB
@@ -517,12 +520,14 @@ export function DeployWizardClient() {
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                   <p className="text-[12px] font-medium text-orange-700">
                     You&apos;ll be charged <span className="font-bold">{formatUsd(currentTierOption.priceUsd)}/mo</span>{" "}
-                    ({formatInr(currentTierOption.priceInr)}) via
-                    Razorpay for {TIER_LABELS[tier]?.label ?? tier} in {currentLocation?.label}.
+                    ({formatInr(currentTierOption.priceInr)}) for {TIER_LABELS[tier]?.label ?? tier} in {currentLocation?.label}.
                   </p>
                   <p className="mt-1 text-[11px] text-orange-600">
                     {currentTierOption.cores} vCPU · {currentTierOption.memory} GB RAM · {currentTierOption.disk} GB SSD
                     {currentTierOption.architecture === "arm" ? " · ARM" : " · x86"}
+                  </p>
+                  <p className="mt-1 text-[10px] text-orange-500">
+                    Hetzner base cost: ${currentTierOption.providerCostUsd.toFixed(2)}/mo
                   </p>
                 </div>
               )}

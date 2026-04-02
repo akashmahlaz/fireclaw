@@ -8,6 +8,7 @@ import {
   Rocket,
   CreditCard,
   Settings,
+  Cloud,
   LogOut,
   ChevronLeft,
   Menu,
@@ -21,6 +22,7 @@ const nav = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Agents", href: "/dashboard/agents", icon: Server },
   { label: "Deploy", href: "/dashboard/deploy", icon: Rocket },
+  { label: "Cloud", href: "/dashboard/cloud", icon: Cloud },
   { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ]

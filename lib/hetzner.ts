@@ -23,22 +23,48 @@ function headers() {
 
 async function hetznerFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const method = init?.method ?? "GET";
-  console.log(`[hetzner] ${method} ${BASE}${path}`);
-  if (init?.body) {
-    console.log(`[hetzner] Request body:`, init.body);
+  const maxRetries = 3;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[hetzner] ${method} ${BASE}${path}`);
+      if (init?.body && attempt === 1) {
+        console.log(`[hetzner] Request body:`, init.body);
+      }
+      const res = await fetch(`${BASE}${path}`, {
+        ...init,
+        headers: { ...headers(), ...init?.headers },
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        console.error(`[hetzner] ${method} ${path} → ${res.status}: ${body}`);
+        throw new Error(`Hetzner API error ${res.status}: ${body}`);
+      }
+      const data = (await res.json()) as T;
+      console.log(`[hetzner] ${method} ${path} → ${res.status} OK`);
+      return data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Only retry on network-level errors, not API errors (4xx/5xx)
+      const isNetworkError =
+        msg.includes("fetch failed") ||
+        msg.includes("ECONNRESET") ||
+        msg.includes("ECONNREFUSED") ||
+        msg.includes("ETIMEDOUT") ||
+        msg.includes("UND_ERR_SOCKET") ||
+        msg.includes("socket hang up");
+
+      if (isNetworkError && attempt < maxRetries) {
+        const delay = attempt * 2000;
+        console.warn(`[hetzner] ${method} ${path} → network error (attempt ${attempt}/${maxRetries}): ${msg} — retrying in ${delay}ms`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
   }
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: { ...headers(), ...init?.headers },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`[hetzner] ${method} ${path} → ${res.status}: ${body}`);
-    throw new Error(`Hetzner API error ${res.status}: ${body}`);
-  }
-  const data = (await res.json()) as T;
-  console.log(`[hetzner] ${method} ${path} → ${res.status} OK`);
-  return data;
+  // Unreachable, but TypeScript needs this
+  throw new Error("hetznerFetch: max retries exceeded");
 }
 
 // ── Types ──────────────────────────────────────────────────────────────

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         await updateAgent(agentId, userId, { status: "running" });
         console.log(`[deploy] Agent ${agentId}: ✅ RUNNING at https://${domain}`);
       } else {
-        await pushProvisionLog(agentId, "Health check timed out (5 min) — server may still be booting", "error");
+        await pushProvisionLog(agentId, "Health check timed out (10 min) — server may still be booting", "error");
         await pushProvisionLog(agentId, `Try: ssh root@${serverIp} then docker compose -f /opt/openclaw/docker-compose.yml logs`, "error");
         await updateAgent(agentId, userId, { status: "error" });
         console.error(`[deploy] Agent ${agentId}: ❌ Health check TIMED OUT — ip=${serverIp}`);
