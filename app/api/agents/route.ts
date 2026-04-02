@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
       // Wait for OpenClaw to come online (health check)
       await pushProvisionLog(agentId, "Waiting for OpenClaw Gateway to start", "pending");
-      const healthy = await waitForHealth(domain, agentId);
+      const healthy = await waitForHealth(domain, agentId, undefined, serverIp);
 
       if (healthy) {
         await pushProvisionLog(agentId, "Health check passed — OpenClaw Gateway responding", "ok");
