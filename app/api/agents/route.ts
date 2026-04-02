@@ -65,14 +65,16 @@ export async function POST(request: NextRequest) {
       const healthy = await waitForHealth(domain, agentId, undefined, serverIp);
 
       if (healthy) {
+        // Update status FIRST — on Vercel serverless the function can be
+        // killed at any moment after the response was already sent.
+        await updateAgent(agentId, userId, { status: "running" });
         await pushProvisionLog(agentId, "Health check passed — OpenClaw Gateway responding", "ok");
         await pushProvisionLog(agentId, `🚀 Live at https://${domain}`, "ok");
-        await updateAgent(agentId, userId, { status: "running" });
         console.log(`[deploy] Agent ${agentId}: ✅ RUNNING at https://${domain}`);
       } else {
+        await updateAgent(agentId, userId, { status: "error" });
         await pushProvisionLog(agentId, "Health check timed out (10 min) — server may still be booting", "error");
         await pushProvisionLog(agentId, `Try: ssh root@${serverIp} then docker compose -f /opt/openclaw/docker-compose.yml logs`, "error");
-        await updateAgent(agentId, userId, { status: "error" });
         console.error(`[deploy] Agent ${agentId}: ❌ Health check TIMED OUT — ip=${serverIp}`);
       }
     })

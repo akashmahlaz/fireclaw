@@ -166,7 +166,21 @@ export function DeployWizardClient() {
           setAgentDomain(agent.domain)
         }
 
-        if (agent.status === "running") {
+        // Detect success: either status is "running" OR the provision
+        // log contains the "Live at" entry (fallback if Vercel killed
+        // the function before status was updated)
+        const logShowsLive = agent.provisionLog?.some(
+          (e: ProvisionLogEntry) => e.step.startsWith("🚀 Live at") && e.status === "ok"
+        )
+        if (agent.status === "running" || logShowsLive) {
+          if (agent.status !== "running") {
+            // Fix the status in DB since the backend didn't get to it
+            fetch(`/api/agents/${agentId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "running" }),
+            }).catch(() => {})
+          }
           setDeployed(true)
           setDeploying(false)
           clearInterval(interval)
