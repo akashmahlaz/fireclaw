@@ -17,14 +17,14 @@ export interface TierAvailability {
   memory: number; // GB
   disk: number;   // GB
   architecture: "x86" | "arm";
-  /** Provider's base cost in EUR/month */
-  providerCostEur: number;
-  /** Provider's hourly cost in EUR (for pro-rated billing) */
-  providerCostHourlyEur: number;
+  /** Provider's base cost in USD/month (from /pricing endpoint) */
+  providerCostUsd: number;
+  /** Provider's hourly cost in USD (for pro-rated billing) */
+  providerCostHourlyUsd: number;
   /** Included traffic in bytes (from /pricing endpoint) */
   includedTrafficBytes: number;
-  /** Cost per TB of extra traffic in EUR (from /pricing endpoint) */
-  trafficCostPerTbEur: number;
+  /** Cost per TB of extra traffic in USD (from /pricing endpoint) */
+  trafficCostPerTbUsd: number;
   /** Price charged to customer in USD cents */
   priceUsd: number;
   /** Price charged to customer in INR paise */

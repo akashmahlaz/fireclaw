@@ -10,6 +10,11 @@ import {
   requestServerConsole,
   getServer,
   listServerActions,
+  resetServerPassword,
+  enableRescueMode,
+  disableRescueMode,
+  changeServerProtection,
+  updateServer,
 } from "@/lib/hetzner";
 
 export async function GET(
@@ -110,6 +115,62 @@ export async function PATCH(
         per_page: 25,
       });
       return Response.json(result);
+    }
+
+    if (body.action === "change_type") {
+      if (!body.serverType || typeof body.serverType !== "string") {
+        return Response.json({ error: "serverType is required" }, { status: 400 });
+      }
+      const action = await changeServerType(
+        Number(agent.serverId),
+        body.serverType,
+        Boolean(body.upgradeDisk),
+      );
+      return Response.json({ success: true, action });
+    }
+
+    if (body.action === "reset_password") {
+      const result = await resetServerPassword(Number(agent.serverId));
+      return Response.json({
+        success: true,
+        action: result.action,
+        rootPassword: result.root_password,
+      });
+    }
+
+    if (body.action === "enable_rescue") {
+      const sshKeyIds = Array.isArray(body.sshKeyIds)
+        ? body.sshKeyIds.filter((v: unknown) => Number.isInteger(v))
+        : [];
+      const result = await enableRescueMode(Number(agent.serverId), sshKeyIds);
+      return Response.json({
+        success: true,
+        action: result.action,
+        rootPassword: result.root_password,
+      });
+    }
+
+    if (body.action === "disable_rescue") {
+      const action = await disableRescueMode(Number(agent.serverId));
+      return Response.json({ success: true, action });
+    }
+
+    if (body.action === "set_protection") {
+      const del = Boolean(body.delete);
+      const reb = Boolean(body.rebuild);
+      const action = await changeServerProtection(Number(agent.serverId), {
+        delete: del,
+        rebuild: reb,
+      });
+      return Response.json({ success: true, action });
+    }
+
+    if (body.action === "rename_server") {
+      if (!body.serverName || typeof body.serverName !== "string") {
+        return Response.json({ error: "serverName is required" }, { status: 400 });
+      }
+      const server = await updateServer(Number(agent.serverId), { name: body.serverName });
+      return Response.json({ success: true, server });
     }
 
     return Response.json({ error: "Unknown action" }, { status: 400 });

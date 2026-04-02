@@ -71,8 +71,13 @@ const TIER_MARGIN_USD: Record<string, number> = {
   enterprise: 15,
 };
 
-const EUR_TO_USD = 1.09;
 const USD_TO_INR = 84;
+/**
+ * EUR→USD fallback rate, used ONLY if the account's pricing currency is EUR.
+ * Hetzner returns prices in the account's billing currency — most accounts
+ * created with a US payment method already get USD prices from /pricing.
+ */
+const EUR_TO_USD_FALLBACK = 1.09;
 
 /* ── Hetzner API types ───────────────────────────────────────────── */
 
@@ -145,6 +150,8 @@ interface ApiCache {
     includedTraffic: number;
     pricePerTbTrafficGross: number;
   }>;
+  /** Currency from /pricing ("USD" or "EUR") */
+  pricingCurrency: string;
   ts: number;
 }
 
@@ -245,7 +252,8 @@ async function fetchHetznerData(): Promise<ApiCache> {
     }
   }
 
-  console.log(`[hetzner] Pricing: ${pricing.size} type×location price entries`);
+  const pricingCurrency = pricingJson.pricing.currency ?? "EUR";
+  console.log(`[hetzner] Pricing: ${pricing.size} type×location entries, currency=${pricingCurrency}`);
 
   apiCache = {
     typeMap,
@@ -254,6 +262,7 @@ async function fetchHetznerData(): Promise<ApiCache> {
     datacenters: dcJson.datacenters,
     dcAvailable,
     pricing,
+    pricingCurrency,
     ts: Date.now(),
   };
   return apiCache;
@@ -357,15 +366,20 @@ export const hetznerProvider: CloudProvider = {
         const pricingKey = `${pricingName}:${loc.name}`;
         const pricingData = data.pricing.get(pricingKey);
         // Fallback to server_type.prices if /pricing doesn't have this combo
-        const providerCostEur = pricingData?.priceMonthlyGross
+        const providerCostGross = pricingData?.priceMonthlyGross
           ?? getPrice(data, pricingName, loc.name);
-        if (!providerCostEur) continue;
+        if (!providerCostGross) continue;
 
-        const providerCostHourlyEur = pricingData?.priceHourlyGross ?? (providerCostEur / 730);
+        const providerCostHourlyGross = pricingData?.priceHourlyGross ?? (providerCostGross / 730);
         const includedTrafficBytes = pricingData?.includedTraffic ?? 0;
-        const trafficCostPerTbEur = pricingData?.pricePerTbTrafficGross ?? 0;
+        const trafficCostGross = pricingData?.pricePerTbTrafficGross ?? 0;
 
-        const providerCostUsd = providerCostEur * EUR_TO_USD;
+        // Convert to USD only if account's pricing currency is EUR
+        const toUsd = data.pricingCurrency === "USD" ? 1 : EUR_TO_USD_FALLBACK;
+        const providerCostUsd = providerCostGross * toUsd;
+        const providerCostHourlyUsd = providerCostHourlyGross * toUsd;
+        const trafficCostPerTbUsd = trafficCostGross * toUsd;
+
         const marginUsd = TIER_MARGIN_USD[tierDef.id] ?? 2;
         const totalUsd = providerCostUsd + marginUsd;
         const priceUsd = Math.round(totalUsd * 100);
@@ -378,10 +392,10 @@ export const hetznerProvider: CloudProvider = {
           memory: pricingSt.memory,
           disk: pricingSt.disk,
           architecture: pricingSt.architecture === "arm" ? "arm" : "x86",
-          providerCostEur,
-          providerCostHourlyEur,
+          providerCostUsd,
+          providerCostHourlyUsd,
           includedTrafficBytes,
-          trafficCostPerTbEur,
+          trafficCostPerTbUsd,
           priceUsd,
           priceInr,
         };

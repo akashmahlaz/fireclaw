@@ -53,7 +53,7 @@ interface TierOption {
   cores: number
   memory: number
   disk: number
-  providerCostEur: number
+  providerCostUsd: number
   priceUsd: number
   priceInr: number
   architecture: "x86" | "arm"

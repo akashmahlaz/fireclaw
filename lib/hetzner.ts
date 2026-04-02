@@ -525,3 +525,446 @@ export async function removeFirewallFromResources(
   );
   return data.actions;
 }
+
+// ── Catalog / Reference APIs ───────────────────────────────────────────
+
+export interface HetznerServerType {
+  id: number;
+  name: string;
+  cores: number;
+  memory: number;
+  disk: number;
+  architecture: string;
+  deprecated: boolean;
+}
+
+export interface HetznerLocation {
+  id: number;
+  name: string;
+  city: string;
+  country: string;
+  network_zone: string;
+}
+
+export interface HetznerDatacenter {
+  id: number;
+  name: string;
+  location: HetznerLocation;
+  server_types: { available: number[]; supported: number[] };
+}
+
+export interface HetznerIso {
+  id: number;
+  name: string;
+  description: string;
+  type: string;
+  architecture: string;
+  deprecated: string | null;
+}
+
+export interface HetznerCertificate {
+  id: number;
+  name: string;
+  type: "uploaded" | "managed";
+  created: string;
+  not_valid_before: string;
+  not_valid_after: string;
+  labels: Record<string, string>;
+}
+
+export async function listServerTypes(): Promise<HetznerServerType[]> {
+  const data = await hetznerFetch<{ server_types: HetznerServerType[] }>("/server_types?per_page=50");
+  return data.server_types;
+}
+
+export async function getServerType(id: number): Promise<HetznerServerType> {
+  const data = await hetznerFetch<{ server_type: HetznerServerType }>(`/server_types/${id}`);
+  return data.server_type;
+}
+
+export async function listLocations(): Promise<HetznerLocation[]> {
+  const data = await hetznerFetch<{ locations: HetznerLocation[] }>("/locations");
+  return data.locations;
+}
+
+export async function getLocation(id: number): Promise<HetznerLocation> {
+  const data = await hetznerFetch<{ location: HetznerLocation }>(`/locations/${id}`);
+  return data.location;
+}
+
+export async function listDatacenters(): Promise<HetznerDatacenter[]> {
+  const data = await hetznerFetch<{ datacenters: HetznerDatacenter[] }>("/datacenters");
+  return data.datacenters;
+}
+
+export async function getDatacenter(id: number): Promise<HetznerDatacenter> {
+  const data = await hetznerFetch<{ datacenter: HetznerDatacenter }>(`/datacenters/${id}`);
+  return data.datacenter;
+}
+
+export async function listIsos(): Promise<HetznerIso[]> {
+  const data = await hetznerFetch<{ isos: HetznerIso[] }>("/isos?per_page=50");
+  return data.isos;
+}
+
+export async function getIso(id: number): Promise<HetznerIso> {
+  const data = await hetznerFetch<{ iso: HetznerIso }>(`/isos/${id}`);
+  return data.iso;
+}
+
+export async function listCertificates(): Promise<HetznerCertificate[]> {
+  const data = await hetznerFetch<{ certificates: HetznerCertificate[] }>("/certificates?per_page=50");
+  return data.certificates;
+}
+
+export async function getCertificate(id: number): Promise<HetznerCertificate> {
+  const data = await hetznerFetch<{ certificate: HetznerCertificate }>(`/certificates/${id}`);
+  return data.certificate;
+}
+
+// ── SSH Keys ───────────────────────────────────────────────────────────
+
+export interface HetznerSshKey {
+  id: number;
+  name: string;
+  fingerprint: string;
+  public_key: string;
+  labels: Record<string, string>;
+}
+
+export async function listSshKeys(): Promise<HetznerSshKey[]> {
+  const data = await hetznerFetch<{ ssh_keys: HetznerSshKey[] }>("/ssh_keys?per_page=50");
+  return data.ssh_keys;
+}
+
+export async function getSshKey(id: number): Promise<HetznerSshKey> {
+  const data = await hetznerFetch<{ ssh_key: HetznerSshKey }>(`/ssh_keys/${id}`);
+  return data.ssh_key;
+}
+
+export async function createSshKey(opts: {
+  name: string;
+  public_key: string;
+  labels?: Record<string, string>;
+}): Promise<HetznerSshKey> {
+  const data = await hetznerFetch<{ ssh_key: HetznerSshKey }>("/ssh_keys", {
+    method: "POST",
+    body: JSON.stringify(opts),
+  });
+  return data.ssh_key;
+}
+
+export async function deleteSshKey(id: number): Promise<void> {
+  await hetznerFetch(`/ssh_keys/${id}`, { method: "DELETE" });
+}
+
+// ── Images / Snapshots ────────────────────────────────────────────────
+
+export interface HetznerImage {
+  id: number;
+  type: string;
+  status: string;
+  name: string | null;
+  description: string;
+  labels: Record<string, string>;
+  created: string;
+  image_size: number;
+  disk_size: number;
+  architecture: string;
+}
+
+export async function listImages(type?: "system" | "snapshot" | "backup" | "app"): Promise<HetznerImage[]> {
+  const params = new URLSearchParams({ per_page: "50" });
+  if (type) params.set("type", type);
+  const data = await hetznerFetch<{ images: HetznerImage[] }>(`/images?${params.toString()}`);
+  return data.images;
+}
+
+export async function getImage(id: number): Promise<HetznerImage> {
+  const data = await hetznerFetch<{ image: HetznerImage }>(`/images/${id}`);
+  return data.image;
+}
+
+export async function updateImage(
+  id: number,
+  opts: { description?: string; type?: "snapshot"; labels?: Record<string, string> },
+): Promise<HetznerImage> {
+  const data = await hetznerFetch<{ image: HetznerImage }>(`/images/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(opts),
+  });
+  return data.image;
+}
+
+export async function deleteImage(id: number): Promise<void> {
+  await hetznerFetch(`/images/${id}`, { method: "DELETE" });
+}
+
+// ── Volumes ────────────────────────────────────────────────────────────
+
+export interface HetznerVolume {
+  id: number;
+  name: string;
+  size: number;
+  status: string;
+  location: HetznerLocation;
+  labels: Record<string, string>;
+  server: { id: number; name: string } | null;
+  linux_device: string | null;
+}
+
+export async function listVolumes(): Promise<HetznerVolume[]> {
+  const data = await hetznerFetch<{ volumes: HetznerVolume[] }>("/volumes?per_page=50");
+  return data.volumes;
+}
+
+export async function getVolume(id: number): Promise<HetznerVolume> {
+  const data = await hetznerFetch<{ volume: HetznerVolume }>(`/volumes/${id}`);
+  return data.volume;
+}
+
+export async function createVolume(opts: {
+  name: string;
+  size: number;
+  location?: string;
+  labels?: Record<string, string>;
+}): Promise<HetznerVolume> {
+  const data = await hetznerFetch<{ volume: HetznerVolume }>("/volumes", {
+    method: "POST",
+    body: JSON.stringify(opts),
+  });
+  return data.volume;
+}
+
+export async function updateVolume(id: number, opts: { name?: string; labels?: Record<string, string> }): Promise<HetznerVolume> {
+  const data = await hetznerFetch<{ volume: HetznerVolume }>(`/volumes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(opts),
+  });
+  return data.volume;
+}
+
+export async function deleteVolume(id: number): Promise<void> {
+  await hetznerFetch(`/volumes/${id}`, { method: "DELETE" });
+}
+
+// ── Primary IPs ────────────────────────────────────────────────────────
+
+export interface HetznerPrimaryIp {
+  id: number;
+  name: string;
+  type: "ipv4" | "ipv6";
+  ip: string;
+  assignee_type: string | null;
+  assignee_id: number | null;
+  auto_delete: boolean;
+  labels: Record<string, string>;
+}
+
+export async function listPrimaryIps(): Promise<HetznerPrimaryIp[]> {
+  const data = await hetznerFetch<{ primary_ips: HetznerPrimaryIp[] }>("/primary_ips?per_page=50");
+  return data.primary_ips;
+}
+
+export async function getPrimaryIp(id: number): Promise<HetznerPrimaryIp> {
+  const data = await hetznerFetch<{ primary_ip: HetznerPrimaryIp }>(`/primary_ips/${id}`);
+  return data.primary_ip;
+}
+
+export async function createPrimaryIp(opts: {
+  name: string;
+  type: "ipv4" | "ipv6";
+  datacenter?: string;
+  assignee_id?: number;
+  auto_delete?: boolean;
+  labels?: Record<string, string>;
+}): Promise<HetznerPrimaryIp> {
+  const data = await hetznerFetch<{ primary_ip: HetznerPrimaryIp }>("/primary_ips", {
+    method: "POST",
+    body: JSON.stringify(opts),
+  });
+  return data.primary_ip;
+}
+
+export async function updatePrimaryIp(id: number, opts: { name?: string; auto_delete?: boolean; labels?: Record<string, string> }): Promise<HetznerPrimaryIp> {
+  const data = await hetznerFetch<{ primary_ip: HetznerPrimaryIp }>(`/primary_ips/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(opts),
+  });
+  return data.primary_ip;
+}
+
+export async function deletePrimaryIp(id: number): Promise<void> {
+  await hetznerFetch(`/primary_ips/${id}`, { method: "DELETE" });
+}
+
+// ── Networks ───────────────────────────────────────────────────────────
+
+export interface HetznerNetwork {
+  id: number;
+  name: string;
+  ip_range: string;
+  subnets: { type: string; ip_range: string; network_zone: string; gateway: string | null }[];
+  routes: { destination: string; gateway: string }[];
+  labels: Record<string, string>;
+}
+
+export async function listNetworks(): Promise<HetznerNetwork[]> {
+  const data = await hetznerFetch<{ networks: HetznerNetwork[] }>("/networks?per_page=50");
+  return data.networks;
+}
+
+export async function getNetwork(id: number): Promise<HetznerNetwork> {
+  const data = await hetznerFetch<{ network: HetznerNetwork }>(`/networks/${id}`);
+  return data.network;
+}
+
+export async function createNetwork(opts: {
+  name: string;
+  ip_range: string;
+  labels?: Record<string, string>;
+}): Promise<HetznerNetwork> {
+  const data = await hetznerFetch<{ network: HetznerNetwork }>("/networks", {
+    method: "POST",
+    body: JSON.stringify(opts),
+  });
+  return data.network;
+}
+
+export async function updateNetwork(id: number, opts: { name?: string; labels?: Record<string, string> }): Promise<HetznerNetwork> {
+  const data = await hetznerFetch<{ network: HetznerNetwork }>(`/networks/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(opts),
+  });
+  return data.network;
+}
+
+export async function deleteNetwork(id: number): Promise<void> {
+  await hetznerFetch(`/networks/${id}`, { method: "DELETE" });
+}
+
+// ── Placement Groups ───────────────────────────────────────────────────
+
+export interface HetznerPlacementGroup {
+  id: number;
+  name: string;
+  type: "spread";
+  labels: Record<string, string>;
+  servers: number[];
+}
+
+export async function listPlacementGroups(): Promise<HetznerPlacementGroup[]> {
+  const data = await hetznerFetch<{ placement_groups: HetznerPlacementGroup[] }>("/placement_groups?per_page=50");
+  return data.placement_groups;
+}
+
+export async function getPlacementGroup(id: number): Promise<HetznerPlacementGroup> {
+  const data = await hetznerFetch<{ placement_group: HetznerPlacementGroup }>(`/placement_groups/${id}`);
+  return data.placement_group;
+}
+
+export async function createPlacementGroup(opts: {
+  name: string;
+  type?: "spread";
+  labels?: Record<string, string>;
+}): Promise<HetznerPlacementGroup> {
+  const data = await hetznerFetch<{ placement_group: HetznerPlacementGroup }>("/placement_groups", {
+    method: "POST",
+    body: JSON.stringify({ ...opts, type: opts.type ?? "spread" }),
+  });
+  return data.placement_group;
+}
+
+export async function deletePlacementGroup(id: number): Promise<void> {
+  await hetznerFetch(`/placement_groups/${id}`, { method: "DELETE" });
+}
+
+// ── Floating IPs ───────────────────────────────────────────────────────
+
+export interface HetznerFloatingIp {
+  id: number;
+  description: string;
+  type: "ipv4" | "ipv6";
+  ip: string;
+  server: number | null;
+  home_location: HetznerLocation | null;
+  labels: Record<string, string>;
+}
+
+export async function listFloatingIps(): Promise<HetznerFloatingIp[]> {
+  const data = await hetznerFetch<{ floating_ips: HetznerFloatingIp[] }>("/floating_ips?per_page=50");
+  return data.floating_ips;
+}
+
+export async function getFloatingIp(id: number): Promise<HetznerFloatingIp> {
+  const data = await hetznerFetch<{ floating_ip: HetznerFloatingIp }>(`/floating_ips/${id}`);
+  return data.floating_ip;
+}
+
+export async function createFloatingIp(opts: {
+  type: "ipv4" | "ipv6";
+  home_location?: string;
+  server?: number;
+  description?: string;
+  labels?: Record<string, string>;
+}): Promise<HetznerFloatingIp> {
+  const data = await hetznerFetch<{ floating_ip: HetznerFloatingIp }>("/floating_ips", {
+    method: "POST",
+    body: JSON.stringify(opts),
+  });
+  return data.floating_ip;
+}
+
+export async function updateFloatingIp(
+  id: number,
+  opts: { description?: string; labels?: Record<string, string> },
+): Promise<HetznerFloatingIp> {
+  const data = await hetznerFetch<{ floating_ip: HetznerFloatingIp }>(`/floating_ips/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(opts),
+  });
+  return data.floating_ip;
+}
+
+export async function deleteFloatingIp(id: number): Promise<void> {
+  await hetznerFetch(`/floating_ips/${id}`, { method: "DELETE" });
+}
+
+export async function assignFloatingIp(id: number, server: number): Promise<HetznerAction> {
+  const data = await hetznerFetch<{ action: HetznerAction }>(
+    `/floating_ips/${id}/actions/assign`,
+    {
+      method: "POST",
+      body: JSON.stringify({ server }),
+    },
+  );
+  return data.action;
+}
+
+export async function unassignFloatingIp(id: number): Promise<HetznerAction> {
+  const data = await hetznerFetch<{ action: HetznerAction }>(
+    `/floating_ips/${id}/actions/unassign`,
+    { method: "POST" },
+  );
+  return data.action;
+}
+
+// ── Global Server Actions ──────────────────────────────────────────────
+
+export async function listGlobalServerActions(opts?: {
+  status?: "running" | "success" | "error";
+  page?: number;
+  per_page?: number;
+}): Promise<{ actions: HetznerAction[]; meta: { pagination: { total_entries: number } } }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.per_page) params.set("per_page", String(opts.per_page));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return hetznerFetch(`/servers/actions${qs}`);
+}
+
+export async function getGlobalServerAction(actionId: number): Promise<HetznerAction> {
+  const data = await hetznerFetch<{ action: HetznerAction }>(`/servers/actions/${actionId}`);
+  return data.action;
+}
