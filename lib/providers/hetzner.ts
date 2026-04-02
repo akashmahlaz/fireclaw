@@ -1,15 +1,22 @@
 /**
  * Hetzner Cloud provider implementation.
  *
- * Key design:
- * - We show the **guaranteed** price (CPX, available everywhere) to the user.
- * - During provisioning we try cheaper types first (CX/CAX) — extra margin if they work.
- * - If all cheaper types are out of stock, CPX is the safety net.
+ * Uses THREE Hetzner API endpoints for accurate availability:
  *
- * Hetzner families:
- *   CX  = Intel/AMD cost-optimized — EU only (fsn1, hel1, nbg1)
- *   CAX = Ampere ARM              — EU + US-East (ash), limited stock
- *   CPX = Shared Intel/AMD        — ALL locations (universal fallback)
+ * 1. GET /v1/server_types  — types with `locations[].available` (real-time)
+ *    and `locations[].deprecation.unavailable_after` (scheduled removal)
+ *
+ * 2. GET /v1/datacenters   — `server_types.available` = IDs you can create NOW
+ *    (most accurate for real-time stock)
+ *
+ * 3. GET /v1/locations     — dynamic location list with city, country, network_zone
+ *
+ * Hetzner server type families (cheapest → most expensive):
+ *   CX  = Cost-Optimized (x86)    — EU only, cheapest
+ *   CAX = ARM Ampere (shared)     — EU + some US, cheap
+ *   CPXx2 = Regular gen2 (x86)   — EU + sin, good mid-range
+ *   CPXx1 = Regular gen1 (x86)   — being deprecated per-location
+ *   CCX = Dedicated AMD (x86)    — all locations, most expensive
  */
 
 import type {
@@ -32,68 +39,57 @@ const TIER_DEFS: TierDef[] = [
   { id: "enterprise", label: "Enterprise", minCores: 16, minMemory: 32 },
 ];
 
-/** Locations we expose to customers */
-const EXPOSED_LOCATIONS: Record<string, { label: string; country: string; region: string }> = {
-  fsn1: { label: "Falkenstein", country: "de", region: "eu-central" },
-  ash:  { label: "Ashburn",     country: "us", region: "us-east" },
-  sin:  { label: "Singapore",   country: "sg", region: "ap-southeast" },
-};
-
-/** Our margin in EUR per tier (added on top of Hetzner's cost) */
-const TIER_MARGIN_EUR: Record<string, number> = {
-  starter: 3,
-  standard: 7,
-  pro: 15,
-  enterprise: 30,
-};
-
-const EUR_TO_INR = 92;
-
 /**
- * Fallback chains per tier per location.
- * Order: cheapest → universal fallback (CPX always last).
- * The *last* entry is the "guaranteed" type used for pricing.
+ * Server type preference order per tier (cheapest first).
+ * Filtered at runtime against the real API `locations[].available` +
+ * `datacenters.server_types.available` fields.
  */
-const FALLBACK_CHAINS: Record<string, Record<string, string[]>> = {
-  starter: {
-    fsn1: ["cx23", "cax11", "cpx21"],
-    hel1: ["cx23", "cax11", "cpx21"],
-    nbg1: ["cx23", "cax11", "cpx21"],
-    ash:  ["cax11", "cpx21"],
-    hil:  ["cpx21"],
-    sin:  ["cpx21"],
-  },
-  standard: {
-    fsn1: ["cx33", "cax21", "cpx31"],
-    hel1: ["cx33", "cax21", "cpx31"],
-    nbg1: ["cx33", "cax21", "cpx31"],
-    ash:  ["cax21", "cpx31"],
-    hil:  ["cpx31"],
-    sin:  ["cpx31"],
-  },
-  pro: {
-    fsn1: ["cx43", "cax31", "cpx41"],
-    hel1: ["cx43", "cax31", "cpx41"],
-    nbg1: ["cx43", "cax31", "cpx41"],
-    ash:  ["cax31", "cpx41"],
-    hil:  ["cpx41"],
-    sin:  ["cpx41"],
-  },
-  enterprise: {
-    fsn1: ["cx53", "cax41", "cpx51"],
-    hel1: ["cx53", "cax41", "cpx51"],
-    nbg1: ["cx53", "cax41", "cpx51"],
-    ash:  ["cax41", "cpx51"],
-    hil:  ["cpx51"],
-    sin:  ["cpx51"],
-  },
+const TYPE_PREFERENCE: Record<string, string[]> = {
+  // Starter: ~2 vCPU, ~4 GB
+  starter:    ["cx23", "cax11", "cpx22", "cpx12", "cpx21", "cpx11", "ccx13"],
+  // Standard: ~4 vCPU, ~8 GB
+  standard:   ["cx33", "cax21", "cpx32", "cpx31", "ccx23"],
+  // Pro: ~8 vCPU, ~16 GB
+  pro:        ["cx43", "cax31", "cpx42", "cpx41", "ccx33"],
+  // Enterprise: ~16 vCPU, ~32 GB
+  enterprise: ["cx53", "cax41", "cpx62", "cpx52", "cpx51", "ccx43"],
 };
+
+/** Fallback location ordering by network_zone */
+const ZONE_FALLBACK: Record<string, string[]> = {
+  "eu-central":    ["nbg1", "hel1", "fsn1"],
+  "us-east":       ["ash", "hil"],
+  "us-west":       ["hil", "ash"],
+  "ap-southeast":  ["sin"],
+};
+
+/** Our margin in USD per tier */
+const TIER_MARGIN_USD: Record<string, number> = {
+  starter: 1,
+  standard: 3,
+  pro: 7,
+  enterprise: 15,
+};
+
+const EUR_TO_USD = 1.09;
+const USD_TO_INR = 84;
 
 /* ── Hetzner API types ───────────────────────────────────────────── */
 
 interface HetznerPrice {
   location: string;
   price_monthly: { gross: string };
+}
+
+interface HetznerLocationAvail {
+  id: number;
+  name: string;
+  available: boolean;
+  recommended: boolean;
+  deprecation: {
+    announced: string;
+    unavailable_after: string;
+  } | null;
 }
 
 interface HetznerServerType {
@@ -105,12 +101,233 @@ interface HetznerServerType {
   prices: HetznerPrice[];
   architecture: string;
   deprecated: boolean;
+  deprecation: unknown;
+  category: string;
+  cpu_type: string;
+  locations: HetznerLocationAvail[];
+}
+
+interface HetznerLocation {
+  id: number;
+  name: string;
+  city: string;
+  country: string;
+  network_zone: string;
+}
+
+interface HetznerDatacenter {
+  id: number;
+  name: string;
+  location: HetznerLocation;
+  server_types: {
+    available: number[];
+    supported: number[];
+  };
 }
 
 /* ── Cache ────────────────────────────────────────────────────────── */
 
 let cache: { data: AvailabilityResponse; ts: number } | null = null;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface ApiCache {
+  typeMap: Map<string, HetznerServerType>;
+  typeIdMap: Map<number, string>;
+  locations: HetznerLocation[];
+  datacenters: HetznerDatacenter[];
+  /** Set of "typeName:locationName" that are available NOW per datacenter API */
+  dcAvailable: Set<string>;
+  /** Pricing from GET /pricing — includes hourly, monthly, traffic per type per location */
+  pricing: Map<string, {
+    location: string;
+    priceHourlyGross: number;
+    priceMonthlyGross: number;
+    includedTraffic: number;
+    pricePerTbTrafficGross: number;
+  }>;
+  ts: number;
+}
+
+let apiCache: ApiCache | null = null;
+const API_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function hetznerHeaders(): Record<string, string> {
+  const token = process.env.HETZNER_API_TOKEN;
+  if (!token) throw new Error("Missing HETZNER_API_TOKEN");
+  return { Authorization: `Bearer ${token}` };
+}
+
+/**
+ * Fetch all 3 Hetzner API endpoints in parallel and build a unified cache.
+ */
+async function fetchHetznerData(): Promise<ApiCache> {
+  if (apiCache && Date.now() - apiCache.ts < API_CACHE_TTL_MS) {
+    return apiCache;
+  }
+
+  const headers = hetznerHeaders();
+
+  const [typesRes, locRes, dcRes, pricingRes] = await Promise.all([
+    fetch("https://api.hetzner.cloud/v1/server_types?per_page=50", { headers }),
+    fetch("https://api.hetzner.cloud/v1/locations", { headers }),
+    fetch("https://api.hetzner.cloud/v1/datacenters", { headers }),
+    fetch("https://api.hetzner.cloud/v1/pricing", { headers }),
+  ]);
+
+  if (!typesRes.ok) throw new Error(`Hetzner server_types API ${typesRes.status}`);
+  if (!locRes.ok)   throw new Error(`Hetzner locations API ${locRes.status}`);
+  if (!dcRes.ok)    throw new Error(`Hetzner datacenters API ${dcRes.status}`);
+  if (!pricingRes.ok) throw new Error(`Hetzner pricing API ${pricingRes.status}`);
+
+  const [typesJson, locJson, dcJson, pricingJson] = await Promise.all([
+    typesRes.json() as Promise<{ server_types: HetznerServerType[] }>,
+    locRes.json()   as Promise<{ locations: HetznerLocation[] }>,
+    dcRes.json()    as Promise<{ datacenters: HetznerDatacenter[] }>,
+    pricingRes.json() as Promise<{ pricing: {
+      currency: string;
+      server_types: {
+        id: number;
+        name: string;
+        prices: {
+          location: string;
+          price_hourly: { gross: string };
+          price_monthly: { gross: string };
+          included_traffic: number;
+          price_per_tb_traffic: { gross: string };
+        }[];
+      }[];
+    } }>,
+  ]);
+
+  // Build type maps
+  const typeMap = new Map<string, HetznerServerType>();
+  const typeIdMap = new Map<number, string>();
+  for (const st of typesJson.server_types) {
+    if (!st.deprecated) {
+      typeMap.set(st.name, st);
+      typeIdMap.set(st.id, st.name);
+    }
+  }
+
+  // Build datacenter "available" set: "typeName:locationName"
+  const dcAvailable = new Set<string>();
+  for (const dc of dcJson.datacenters) {
+    const locName = dc.location.name;
+    for (const typeId of dc.server_types.available) {
+      const typeName = typeIdMap.get(typeId);
+      if (typeName) {
+        dcAvailable.add(`${typeName}:${locName}`);
+      }
+    }
+  }
+
+  console.log(
+    `[hetzner] API: ${typeMap.size} types, ${locJson.locations.length} locations, ${dcJson.datacenters.length} DCs, ${dcAvailable.size} available pairs`,
+  );
+
+  // Build pricing map: "typeName:locationName" → pricing data
+  const pricing = new Map<string, {
+    location: string;
+    priceHourlyGross: number;
+    priceMonthlyGross: number;
+    includedTraffic: number;
+    pricePerTbTrafficGross: number;
+  }>();
+  for (const st of pricingJson.pricing.server_types) {
+    for (const p of st.prices) {
+      pricing.set(`${st.name}:${p.location}`, {
+        location: p.location,
+        priceHourlyGross: parseFloat(p.price_hourly.gross),
+        priceMonthlyGross: parseFloat(p.price_monthly.gross),
+        includedTraffic: p.included_traffic,
+        pricePerTbTrafficGross: parseFloat(p.price_per_tb_traffic.gross),
+      });
+    }
+  }
+
+  console.log(`[hetzner] Pricing: ${pricing.size} type×location price entries`);
+
+  apiCache = {
+    typeMap,
+    typeIdMap,
+    locations: locJson.locations,
+    datacenters: dcJson.datacenters,
+    dcAvailable,
+    pricing,
+    ts: Date.now(),
+  };
+  return apiCache;
+}
+
+/**
+ * Check if a server type is truly available in a location.
+ * Uses BOTH sources:
+ *   1. server_type.locations[].available (type-level flag)
+ *   2. datacenter.server_types.available (datacenter real-time stock)
+ */
+function isTypeAvailableInLocation(
+  data: ApiCache,
+  typeName: string,
+  locationName: string,
+): boolean {
+  const st = data.typeMap.get(typeName);
+  if (!st) return false;
+
+  // Check 1: server_type.locations[].available
+  const locEntry = st.locations.find((l) => l.name === locationName);
+  if (!locEntry || !locEntry.available) return false;
+
+  // Check 1b: skip if deprecated and past unavailable_after
+  if (locEntry.deprecation?.unavailable_after) {
+    const deadline = new Date(locEntry.deprecation.unavailable_after);
+    if (Date.now() > deadline.getTime()) return false;
+  }
+
+  // Check 2: datacenter.server_types.available
+  if (!data.dcAvailable.has(`${typeName}:${locationName}`)) return false;
+
+  return true;
+}
+
+/**
+ * Build a fallback chain for a tier + location.
+ * Only includes types that pass BOTH availability checks.
+ */
+function buildChainForLocation(
+  data: ApiCache,
+  tierId: string,
+  locationId: string,
+): string[] {
+  const preferred = TYPE_PREFERENCE[tierId] ?? [];
+  return preferred.filter((name) => isTypeAvailableInLocation(data, name, locationId));
+}
+
+/**
+ * Get monthly price (EUR) for a type in a location.
+ */
+function getPrice(data: ApiCache, typeName: string, locationId: string): number | null {
+  const st = data.typeMap.get(typeName);
+  if (!st) return null;
+  const price = st.prices.find((p) => p.location === locationId);
+  if (!price) return null;
+  return parseFloat(price.price_monthly.gross);
+}
+
+/**
+ * Determine if a Hetzner API error is retriable.
+ */
+function isRetriableError(msg: string): boolean {
+  return (
+    msg.includes("resource_unavailable") ||
+    msg.includes("unavailable") ||
+    msg.includes("unsupported location") ||
+    msg.includes("server location disabled") ||
+    msg.includes("location disabled") ||
+    msg.includes("error during placement") ||
+    msg.includes("error 412") ||
+    msg.includes("error 422")
+  );
+}
 
 /* ── Provider ────────────────────────────────────────────────────── */
 
@@ -122,127 +339,167 @@ export const hetznerProvider: CloudProvider = {
       return cache.data;
     }
 
-    const token = process.env.HETZNER_API_TOKEN;
-    if (!token) throw new Error("Missing HETZNER_API_TOKEN");
-
-    // Fetch all server types from Hetzner
-    const res = await fetch(
-      "https://api.hetzner.cloud/v1/server_types?per_page=50",
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    if (!res.ok) throw new Error(`Hetzner API ${res.status}`);
-    const { server_types: allTypes } = (await res.json()) as {
-      server_types: HetznerServerType[];
-    };
-
-    // Build a lookup: serverTypeName → { specs, price per location }
-    const typeMap = new Map<string, HetznerServerType>();
-    for (const st of allTypes) {
-      if (!st.deprecated) typeMap.set(st.name, st);
-    }
-
+    const data = await fetchHetznerData();
     const locations: RegionAvailability[] = [];
 
-    for (const [locId, locMeta] of Object.entries(EXPOSED_LOCATIONS)) {
+    for (const loc of data.locations) {
       const tiers: Record<string, TierAvailability> = {};
 
       for (const tierDef of TIER_DEFS) {
-        const chain = FALLBACK_CHAINS[tierDef.id]?.[locId];
-        if (!chain || chain.length === 0) continue;
+        const chain = buildChainForLocation(data, tierDef.id, loc.name);
+        if (chain.length === 0) continue;
 
-        // The guaranteed type is the LAST in the chain (CPX — always available)
-        const guaranteedName = chain[chain.length - 1];
-        const guaranteedSt = typeMap.get(guaranteedName);
-        if (!guaranteedSt) continue;
+        // Use the FIRST type in the chain (cheapest truly-available) for pricing
+        const pricingName = chain[0];
+        const pricingSt = data.typeMap.get(pricingName)!;
 
-        const guaranteedPrice = guaranteedSt.prices.find((p) => p.location === locId);
-        if (!guaranteedPrice) continue;
+        // Use /pricing endpoint for accurate hourly + monthly + traffic costs
+        const pricingKey = `${pricingName}:${loc.name}`;
+        const pricingData = data.pricing.get(pricingKey);
+        // Fallback to server_type.prices if /pricing doesn't have this combo
+        const providerCostEur = pricingData?.priceMonthlyGross
+          ?? getPrice(data, pricingName, loc.name);
+        if (!providerCostEur) continue;
 
-        const providerCostEur = parseFloat(guaranteedPrice.price_monthly.gross);
-        const margin = TIER_MARGIN_EUR[tierDef.id] ?? 5;
-        const totalEur = providerCostEur + margin;
-        const priceInr = Math.round(totalEur * EUR_TO_INR * 100); // paise
+        const providerCostHourlyEur = pricingData?.priceHourlyGross ?? (providerCostEur / 730);
+        const includedTrafficBytes = pricingData?.includedTraffic ?? 0;
+        const trafficCostPerTbEur = pricingData?.pricePerTbTrafficGross ?? 0;
+
+        const providerCostUsd = providerCostEur * EUR_TO_USD;
+        const marginUsd = TIER_MARGIN_USD[tierDef.id] ?? 2;
+        const totalUsd = providerCostUsd + marginUsd;
+        const priceUsd = Math.round(totalUsd * 100);
+        const priceInr = Math.round(totalUsd * USD_TO_INR * 100);
 
         tiers[tierDef.id] = {
-          guaranteedType: guaranteedName,
+          guaranteedType: pricingName,
           fallbackChain: chain,
-          cores: guaranteedSt.cores,
-          memory: guaranteedSt.memory,
-          disk: guaranteedSt.disk,
-          architecture: guaranteedSt.architecture === "arm" ? "arm" : "x86",
+          cores: pricingSt.cores,
+          memory: pricingSt.memory,
+          disk: pricingSt.disk,
+          architecture: pricingSt.architecture === "arm" ? "arm" : "x86",
           providerCostEur,
+          providerCostHourlyEur,
+          includedTrafficBytes,
+          trafficCostPerTbEur,
+          priceUsd,
           priceInr,
         };
       }
 
       if (Object.keys(tiers).length > 0) {
         locations.push({
-          id: locId,
-          label: locMeta.label,
-          country: locMeta.country,
-          region: locMeta.region,
+          id: loc.name,
+          label: loc.city,
+          country: loc.country.toLowerCase(),
+          region: loc.network_zone,
           tiers,
         });
       }
     }
 
-    const data: AvailabilityResponse = {
+    // Sort: locations with more tiers first
+    locations.sort((a, b) => Object.keys(b.tiers).length - Object.keys(a.tiers).length);
+
+    const result: AvailabilityResponse = {
       provider: "hetzner",
       locations,
       tierDefs: TIER_DEFS,
     };
 
-    cache = { data, ts: Date.now() };
-    return data;
+    console.log(
+      `[hetzner] availability: ${locations.map((l) => `${l.id}(${Object.keys(l.tiers).length} tiers)`).join(", ") || "NONE"}`,
+    );
+
+    cache = { data: result, ts: Date.now() };
+    return result;
   },
 
   async provision(opts: ProvisionOpts): Promise<ProvisionResult> {
-    // Get the fallback chain for this tier/location
-    const chain = FALLBACK_CHAINS[opts.tier]?.[opts.location] ?? ["cpx21"];
+    const log = opts.onLog ?? (async () => {});
 
-    for (let i = 0; i < chain.length; i++) {
-      const tryType = chain[i];
-      console.log(
-        `[hetzner-provider] attempt ${i + 1}/${chain.length}: ${tryType} in ${opts.location}`,
-      );
+    // Fetch fresh API data (all 3 endpoints)
+    const data = await fetchHetznerData();
 
-      try {
-        const server = await createServer({
-          name: opts.name,
-          serverType: tryType,
-          image: "ubuntu-24.04",
-          location: opts.location,
-          userData: opts.userData,
-        });
+    // Find network_zone for this location → get fallback locations
+    const requestedLoc = data.locations.find((l) => l.name === opts.location);
+    const zone = requestedLoc?.network_zone;
+    const fallbackLocs = zone ? (ZONE_FALLBACK[zone] ?? [opts.location]) : [opts.location];
 
-        console.log(
-          `[hetzner-provider] success: ${server.server_type.name} id=${server.id} ip=${server.public_net.ipv4.ip}`,
-        );
+    // Ensure the requested location is first
+    const orderedLocations = [
+      opts.location,
+      ...fallbackLocs.filter((l) => l !== opts.location),
+    ];
 
-        return {
-          serverId: String(server.id),
-          serverIp: server.public_net.ipv4.ip,
-          serverType: server.server_type.name,
-          datacenter: server.datacenter.name,
-        };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        const isUnavailable =
-          msg.includes("resource_unavailable") || msg.includes("unavailable");
+    let lastError: Error | null = null;
+    let totalAttempts = 0;
 
-        console.warn(
-          `[hetzner-provider] ${tryType} failed (unavailable=${isUnavailable}): ${msg}`,
-        );
+    for (const loc of orderedLocations) {
+      const chain = buildChainForLocation(data, opts.tier, loc);
+      const locLabel = data.locations.find((l) => l.name === loc)?.city ?? loc;
 
-        if (isUnavailable && i < chain.length - 1) {
-          continue; // try next in chain
-        }
-        throw err; // fatal or last fallback failed
+      if (chain.length === 0) {
+        console.log(`[hetzner] ${loc}: no available types for tier=${opts.tier}`);
+        await log(`Skipping ${locLabel} — no types available`, "error");
+        continue;
       }
+
+      console.log(`[hetzner] ${loc} (${locLabel}): chain=[${chain.join(", ")}]`);
+
+      for (const tryType of chain) {
+        totalAttempts++;
+        console.log(`[hetzner] attempt ${totalAttempts}: ${tryType} in ${loc}`);
+        await log(`Trying ${tryType} in ${locLabel} (attempt ${totalAttempts})…`, "pending");
+
+        try {
+          const server = await createServer({
+            name: opts.name,
+            serverType: tryType,
+            image: "ubuntu-24.04",
+            location: loc,
+            userData: opts.userData,
+            labels: opts.labels,
+          });
+
+          console.log(
+            `[hetzner] ✓ ${server.server_type.name} id=${server.id} ip=${server.public_net.ipv4.ip} dc=${server.datacenter.name}`,
+          );
+          await log(`✓ Created ${server.server_type.name} in ${locLabel}`, "ok");
+
+          return {
+            serverId: String(server.id),
+            serverIp: server.public_net.ipv4.ip,
+            serverType: server.server_type.name,
+            datacenter: server.datacenter.name,
+          };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const retriable = isRetriableError(msg);
+
+          console.warn(`[hetzner] ${tryType}@${loc} failed (retriable=${retriable}): ${msg}`);
+          lastError = err instanceof Error ? err : new Error(msg);
+
+          if (msg.includes("location disabled") || msg.includes("server location disabled")) {
+            await log(`✗ ${locLabel} disabled — skipping`, "error");
+            // Invalidate cache since our data is stale
+            apiCache = null;
+            cache = null;
+            break;
+          }
+
+          await log(`✗ ${tryType} in ${locLabel} — ${retriable ? "trying next" : "fatal"}`, "error");
+
+          if (!retriable) throw lastError;
+        }
+      }
+
+      console.log(`[hetzner] all types exhausted in ${loc}`);
     }
 
-    // TypeScript: unreachable but satisfies return
-    throw new Error("All server type fallbacks exhausted");
+    throw lastError ?? new Error(
+      `All server type + location fallbacks exhausted for tier=${opts.tier}`,
+    );
   },
 
   async destroy(serverId: string): Promise<void> {

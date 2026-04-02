@@ -3,11 +3,15 @@ import Razorpay from "razorpay";
 
 export type BillingTier = "starter" | "standard" | "pro" | "enterprise";
 
+/**
+ * Fallback tier prices in INR paise (used only if dynamic pricing is unavailable).
+ * These should roughly match Hetzner cost + margin converted to INR.
+ */
 const TIER_PRICE_INR_PAISE: Record<BillingTier, number> = {
-  starter: 79900,
-  standard: 149900,
-  pro: 299900,
-  enterprise: 599900,
+  starter: 42000,   // ~$5/mo
+  standard: 100800, // ~$12/mo
+  pro: 226800,      // ~$27/mo
+  enterprise: 462000, // ~$55/mo
 };
 
 /**
@@ -15,9 +19,11 @@ const TIER_PRICE_INR_PAISE: Record<BillingTier, number> = {
  * all orders use that amount instead of real tier pricing.
  * Remove this env var for production.
  */
-function getAmount(tier: BillingTier): number {
+function getAmount(tier: BillingTier, dynamicPriceInr?: number): number {
   const testAmount = process.env.RAZORPAY_TEST_AMOUNT;
   if (testAmount) return Number(testAmount);
+  // Use dynamic per-region pricing if provided, otherwise fallback
+  if (dynamicPriceInr && dynamicPriceInr > 0) return dynamicPriceInr;
   return TIER_PRICE_INR_PAISE[tier];
 }
 
@@ -51,10 +57,7 @@ export async function createRazorpayOrder(opts: {
   priceInr?: number;
   agentName: string;
 }) {
-  // Use dynamic per-region pricing if provided, otherwise fall back to tier default
-  // TODO: restore dynamic pricing for production
-  // const amount = opts.priceInr ? opts.priceInr : getAmount(opts.tier);
-  const amount = 100; // ₹1 for testing
+  const amount = getAmount(opts.tier, opts.priceInr);
   const client = getClient();
 
   const order = await client.orders.create({

@@ -57,13 +57,12 @@ export async function POST(request: NextRequest) {
     openaiApiKey: aiProvider === "anthropic" ? undefined : apiKey || undefined,
     anthropicApiKey: aiProvider === "anthropic" ? apiKey || undefined : undefined,
   })
-    .then(async ({ gatewayToken, serverIp, domain }) => {
+    .then(async ({ serverIp, domain }) => {
       console.log(`[deploy] Agent ${agentId}: provision returned — ip=${serverIp}, domain=${domain}`);
-      await updateAgent(agentId, userId, { gatewayToken });
 
       // Wait for OpenClaw to come online (health check)
       await pushProvisionLog(agentId, "Waiting for OpenClaw Gateway to start", "pending");
-      const healthy = await waitForHealth(serverIp, agentId);
+      const healthy = await waitForHealth(domain, agentId);
 
       if (healthy) {
         await pushProvisionLog(agentId, "Health check passed — OpenClaw Gateway responding", "ok");

@@ -19,6 +19,14 @@ export interface TierAvailability {
   architecture: "x86" | "arm";
   /** Provider's base cost in EUR/month */
   providerCostEur: number;
+  /** Provider's hourly cost in EUR (for pro-rated billing) */
+  providerCostHourlyEur: number;
+  /** Included traffic in bytes (from /pricing endpoint) */
+  includedTrafficBytes: number;
+  /** Cost per TB of extra traffic in EUR (from /pricing endpoint) */
+  trafficCostPerTbEur: number;
+  /** Price charged to customer in USD cents */
+  priceUsd: number;
   /** Price charged to customer in INR paise */
   priceInr: number;
 }
@@ -51,6 +59,10 @@ export interface ProvisionOpts {
   location: string;
   tier: string;
   userData: string;
+  /** Labels to set on the created server (key/value metadata) */
+  labels?: Record<string, string>;
+  /** Optional callback for per-attempt progress logging (shown in UI) */
+  onLog?: (step: string, status: "ok" | "pending" | "error") => Promise<void>;
 }
 
 export interface ProvisionResult {

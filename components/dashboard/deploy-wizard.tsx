@@ -54,6 +54,7 @@ interface TierOption {
   memory: number
   disk: number
   providerCostEur: number
+  priceUsd: number
   priceInr: number
   architecture: "x86" | "arm"
 }
@@ -81,6 +82,19 @@ const TIER_LABELS: Record<string, { label: string; desc: string; popular?: boole
 
 function formatInr(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN")}`
+}
+
+function formatUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`
+}
+
+const REGION_LABELS: Record<string, string> = {
+  fsn1: "Falkenstein, Germany",
+  nbg1: "Nuremberg, Germany",
+  hel1: "Helsinki, Finland",
+  ash: "Ashburn, Virginia (US)",
+  hil: "Hillsboro, Oregon (US)",
+  sin: "Singapore, Asia Pacific",
 }
 
 export function DeployWizardClient() {
@@ -113,7 +127,7 @@ export function DeployWizardClient() {
         setAvailability(data)
         // Default to first location
         if (data.locations.length > 0 && !region) {
-          setRegion(data.locations[0].region)
+          setRegion(data.locations[0].id)
         }
       })
       .catch((err) => console.error("Failed to load availability:", err))
@@ -123,7 +137,7 @@ export function DeployWizardClient() {
   // Auto-select first available tier when region changes
   useEffect(() => {
     if (!availability) return
-    const loc = availability.locations.find((l) => l.region === region)
+    const loc = availability.locations.find((l) => l.id === region)
     if (!loc) return
     const availTiers = Object.keys(loc.tiers)
     if (availTiers.length > 0 && (!tier || !loc.tiers[tier])) {
@@ -132,7 +146,7 @@ export function DeployWizardClient() {
   }, [region, availability]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Helper: get current location & tier option
-  const currentLocation = availability?.locations.find((l) => l.region === region)
+  const currentLocation = availability?.locations.find((l) => l.id === region)
   const currentTierOption = currentLocation?.tiers[tier]
 
   // Poll agent status once deploying
@@ -293,13 +307,16 @@ export function DeployWizardClient() {
   const goNext = () => {
     if (step === 3) {
       ;(async () => {
-        try {
-          await startPayment()
-          setStep(4)
-          await handleDeploy()
-        } catch {
-          alert("Payment did not complete. Please try again.")
-        }
+        // TODO: re-enable payment after testing
+        // try {
+        //   await startPayment()
+        //   setStep(4)
+        //   await handleDeploy()
+        // } catch {
+        //   alert("Payment did not complete. Please try again.")
+        // }
+        setStep(4)
+        await handleDeploy()
       })()
     } else {
       setStep((s) => s + 1)
@@ -380,21 +397,22 @@ export function DeployWizardClient() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {availability.locations.map((loc) => {
                     const cheapest = Object.values(loc.tiers).reduce(
-                      (min, t) => (t.priceInr < min ? t.priceInr : min),
+                      (min, t) => (t.priceUsd < min ? t.priceUsd : min),
                       Infinity,
                     )
+                    const tierCount = Object.keys(loc.tiers).length
                     return (
                       <button
-                        key={loc.region}
-                        onClick={() => setRegion(loc.region)}
+                        key={loc.id}
+                        onClick={() => setRegion(loc.id)}
                         className={cn(
                           "relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all",
-                          region === loc.region
+                          region === loc.id
                             ? "border-neutral-900 bg-white shadow-md"
                             : "border-neutral-200 bg-white hover:border-neutral-300",
                         )}
                       >
-                        {region === loc.region && (
+                        {region === loc.id && (
                           <BorderBeam size={60} borderWidth={1.5} colorFrom="#f97316" colorTo="#fbbf24" />
                         )}
                         <img
@@ -404,10 +422,13 @@ export function DeployWizardClient() {
                         />
                         <p className="text-[14px] font-bold text-neutral-900">{loc.label}</p>
                         <p className="text-[11px] text-neutral-400">
-                          {loc.id === "fsn1" ? "Germany, EU" : loc.id === "ash" ? "Virginia, US" : loc.id === "sin" ? "Asia Pacific" : loc.id}
+                          {REGION_LABELS[loc.id] ?? loc.id}
                         </p>
                         <p className="mt-1 text-[11px] font-medium text-orange-600">
-                          from {formatInr(cheapest)}/mo
+                          from {formatUsd(cheapest)}/mo
+                        </p>
+                        <p className="text-[10px] text-neutral-300">
+                          {tierCount} plan{tierCount > 1 ? "s" : ""} available
                         </p>
                       </button>
                     )
@@ -456,7 +477,7 @@ export function DeployWizardClient() {
                           </span>
                         )}
                         <p className="text-[20px] font-black text-neutral-900">
-                          {formatInr(tierOpt.priceInr)}
+                          {formatUsd(tierOpt.priceUsd)}
                         </p>
                         <p className="text-[12px] font-medium text-neutral-500">/month</p>
                         <p className="mt-2 text-[13px] font-bold text-neutral-700">{meta.label}</p>
@@ -495,7 +516,8 @@ export function DeployWizardClient() {
               {currentTierOption && (
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                   <p className="text-[12px] font-medium text-orange-700">
-                    You&apos;ll be charged <span className="font-bold">{formatInr(currentTierOption.priceInr)}/mo</span> via
+                    You&apos;ll be charged <span className="font-bold">{formatUsd(currentTierOption.priceUsd)}/mo</span>{" "}
+                    ({formatInr(currentTierOption.priceInr)}) via
                     Razorpay for {TIER_LABELS[tier]?.label ?? tier} in {currentLocation?.label}.
                   </p>
                   <p className="mt-1 text-[11px] text-orange-600">

@@ -1,6 +1,16 @@
 import { auth } from "@/auth";
 import { getAgentById, updateAgent, deleteAgent } from "@/lib/agents";
 import { destroyAgent, rebootAgent } from "@/lib/provision";
+import {
+  shutdownServer,
+  powerOnServer,
+  powerOffServer,
+  resetServer,
+  changeServerType,
+  requestServerConsole,
+  getServer,
+  listServerActions,
+} from "@/lib/hetzner";
 
 export async function GET(
   _request: Request,
@@ -47,6 +57,59 @@ export async function PATCH(
       await rebootAgent(agent.serverId);
       await updateAgent(id, session.user.id, { status: "running" });
       return Response.json({ success: true });
+    }
+
+    if (body.action === "shutdown") {
+      await shutdownServer(Number(agent.serverId));
+      await updateAgent(id, session.user.id, { status: "stopped" });
+      return Response.json({ success: true });
+    }
+
+    if (body.action === "poweron") {
+      await powerOnServer(Number(agent.serverId));
+      await updateAgent(id, session.user.id, { status: "running" });
+      return Response.json({ success: true });
+    }
+
+    if (body.action === "poweroff") {
+      await powerOffServer(Number(agent.serverId));
+      await updateAgent(id, session.user.id, { status: "stopped" });
+      return Response.json({ success: true });
+    }
+
+    if (body.action === "reset") {
+      await resetServer(Number(agent.serverId));
+      await updateAgent(id, session.user.id, { status: "running" });
+      return Response.json({ success: true });
+    }
+
+    if (body.action === "console") {
+      const result = await requestServerConsole(Number(agent.serverId));
+      return Response.json({
+        wss_url: result.wss_url,
+        password: result.password,
+      });
+    }
+
+    if (body.action === "status") {
+      const server = await getServer(Number(agent.serverId));
+      return Response.json({
+        status: server.status,
+        serverType: server.server_type.name,
+        datacenter: server.datacenter.name,
+        ip: server.public_net.ipv4.ip,
+        created: server.created,
+        includedTraffic: server.included_traffic,
+        ingoingTraffic: server.ingoing_traffic,
+        outgoingTraffic: server.outgoing_traffic,
+      });
+    }
+
+    if (body.action === "actions") {
+      const result = await listServerActions(Number(agent.serverId), {
+        per_page: 25,
+      });
+      return Response.json(result);
     }
 
     return Response.json({ error: "Unknown action" }, { status: 400 });
