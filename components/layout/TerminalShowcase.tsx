@@ -7,9 +7,10 @@ import {
   TypingAnimation,
 } from "@/components/ui/terminal"
 import { useTerminalSounds } from "@/hooks/use-terminal-sounds"
+import { Volume2, VolumeOff } from "lucide-react"
 
 export function TerminalShowcase() {
-  const { playSound } = useTerminalSounds()
+  const { playSound, enabled, toggle } = useTerminalSounds()
 
   return (
     <section className="relative bg-white py-28 sm:py-36">
@@ -35,7 +36,25 @@ export function TerminalShowcase() {
 
         {/* Terminal */}
         <BlurFade inView delay={0.1}>
-          <Terminal className="mx-auto max-w-5xl rounded-2xl border-neutral-200 bg-neutral-950 shadow-2xl shadow-neutral-900/20">
+          <div className="relative mx-auto max-w-5xl">
+            {/* Sound toggle — sits on top-right of terminal */}
+            <button
+              type="button"
+              onClick={toggle}
+              className="absolute right-4 top-3 z-10 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
+              aria-label={enabled ? "Mute terminal sounds" : "Enable terminal sounds"}
+            >
+              {enabled ? (
+                <Volume2 className="size-3.5" />
+              ) : (
+                <VolumeOff className="size-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {enabled ? "Sound on" : "Sound off"}
+              </span>
+            </button>
+
+            <Terminal className="rounded-2xl border-neutral-200 bg-neutral-950 shadow-2xl shadow-neutral-900/20">
             <TypingAnimation
               className="text-green-400 font-semibold mb-2"
               onCharTyped={() => playSound("keystroke")}
@@ -147,6 +166,7 @@ export function TerminalShowcase() {
               {"  Next step: run `fireclaw connect whatsapp`"}
             </TypingAnimation>
           </Terminal>
+          </div>
         </BlurFade>
       </div>
     </section>
