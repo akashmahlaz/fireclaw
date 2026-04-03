@@ -30,8 +30,8 @@ export function Hero() {
         {/* Headline */}
         <BlurFade inView delay={0.08}>
           <h1 className="max-w-[18ch] text-[52px] font-black leading-[1.04] tracking-[-0.04em] text-neutral-900 sm:text-[68px] md:text-[80px] lg:text-[92px]">
-            One message.{" "}
-            <span className="text-orange-500">Infinite control.</span>
+            One click.{" "}
+            <span className="text-orange-500">openclaw deploy.</span>
           </h1>
         </BlurFade>
 
