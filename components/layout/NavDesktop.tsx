@@ -19,7 +19,7 @@ const navItems: Array<{ label: string; href?: string; dropdown?: DropdownDef }> 
           items: [
             { name: "1-Click Deploy", desc: "Launch OpenClaw on a dedicated VPS in seconds", href: "/dashboard" },
             { name: "VPS Tiers", desc: "Starter, Standard, Pro, Enterprise", href: "#pricing" },
-            { name: "Regions", desc: "US, EU, and Singapore data centers", href: "#pricing" },
+            { name: "Regions", desc: "6 locations across US, EU, and Asia", href: "#pricing" },
           ],
         },
         {
@@ -27,30 +27,7 @@ const navItems: Array<{ label: string; href?: string; dropdown?: DropdownDef }> 
           items: [
             { name: "Dashboard", desc: "Monitor, reboot, resize your instances", href: "/dashboard" },
             { name: "Custom Domains", desc: "Bring your own domain with SSL", href: "/dashboard" },
-            { name: "Backups", desc: "Automated daily snapshots", href: "/dashboard" },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    label: "CHANNELS",
-    dropdown: {
-      sections: [
-        {
-          title: "Messaging",
-          items: [
-            { name: "WhatsApp", desc: "Connect your personal or business number", href: "#features" },
-            { name: "Telegram", desc: "Bot and group chat automation", href: "#features" },
-            { name: "Discord", desc: "Server bots and DM automation", href: "#features" },
-          ],
-        },
-        {
-          title: "More Platforms",
-          items: [
-            { name: "Slack", desc: "Workspace AI assistant integration", href: "#features" },
-            { name: "Signal & iMessage", desc: "Private messaging support", href: "#features" },
-            { name: "Web Chat", desc: "Embedded chat on any website", href: "#features" },
+            { name: "SSH Access", desc: "Full root access to your VPS", href: "/dashboard" },
           ],
         },
       ],

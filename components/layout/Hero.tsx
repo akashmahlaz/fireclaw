@@ -38,8 +38,8 @@ export function Hero() {
         {/* Subtitle */}
         <BlurFade inView delay={0.14}>
           <p className="max-w-[52ch] text-balance text-[16px] leading-[1.75] text-neutral-500 sm:text-[18px]">
-            Deploy a private AI server in 60 seconds. Own the infrastructure.
-            Connect every channel. Scale without asking permission.
+            Deploy a private OpenClaw server in 60 seconds. Own the
+            infrastructure. Scale without asking permission.
           </p>
         </BlurFade>
 
@@ -72,11 +72,11 @@ export function Hero() {
               Dedicated VPS — not shared
             </span>
             <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
-            <span>From $7.99/mo</span>
+            <span>From €4.49/mo</span>
             <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
             <span>&lt;60s deploy time</span>
             <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
-            <span>3 regions</span>
+            <span>6 locations</span>
           </div>
         </BlurFade>
       </div>

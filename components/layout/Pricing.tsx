@@ -9,68 +9,67 @@ import { BorderBeam } from "@/components/ui/border-beam"
 const plans = [
   {
     name: "Starter",
-    price: "$7.99",
+    price: "€4.49",
     period: "/mo",
     description: "Perfect for testing and personal projects.",
-    specs: "2 vCPU · 4 GB RAM · 40 GB NVMe",
+    specs: "CX23 · 2 vCPU · 4 GB RAM · 40 GB NVMe",
     features: [
       "1 OpenClaw instance",
-      "3 channels included",
-      "EU region",
-      "SSL + custom subdomain",
+      "Dedicated VPS — not shared",
+      "fireclaw.ai subdomain + SSL",
+      "Full root SSH access",
       "Community support",
     ],
     highlighted: false,
   },
   {
     name: "Standard",
-    price: "$14.99",
+    price: "€6.99",
     period: "/mo",
     description: "For creators and small teams.",
-    specs: "4 vCPU · 8 GB RAM · 80 GB NVMe",
+    specs: "CX33 · 4 vCPU · 8 GB RAM · 80 GB NVMe",
     features: [
       "1 OpenClaw instance",
-      "10 channels included",
-      "EU + US regions",
-      "SSL + custom domain",
-      "Priority email support",
-      "Daily backups",
+      "Dedicated VPS — not shared",
+      "Custom domain + SSL",
+      "Full root SSH access",
+      "All 6 locations",
+      "Email support",
     ],
     highlighted: false,
   },
   {
     name: "Pro",
-    price: "$29.99",
+    price: "€12.49",
     period: "/mo",
     badge: "Most Popular",
     description: "For businesses scaling fast.",
-    specs: "8 vCPU · 16 GB RAM · 160 GB NVMe",
+    specs: "CX43 · 8 vCPU · 16 GB RAM · 160 GB NVMe",
     features: [
       "Up to 3 instances",
-      "Unlimited channels",
-      "All 3 regions",
-      "SSL + custom domain",
-      "Priority support + Discord",
-      "Hourly backups",
+      "Dedicated VPS — not shared",
+      "Custom domain + SSL",
+      "Full root SSH access",
+      "All 6 locations",
+      "Priority support",
       "API access",
     ],
     highlighted: true,
   },
   {
     name: "Enterprise",
-    price: "$59.99",
+    price: "€22.99",
     period: "/mo",
-    description: "Dedicated infrastructure, no compromises.",
-    specs: "16 vCPU · 32 GB RAM · 320 GB NVMe",
+    description: "Maximum power for demanding workloads.",
+    specs: "CX53 · 16 vCPU · 32 GB RAM · 320 GB NVMe",
     features: [
       "Unlimited instances",
-      "Unlimited channels",
-      "All regions + custom",
-      "Dedicated IP + custom domain",
+      "Dedicated VPS — not shared",
+      "Custom domain + dedicated IP",
+      "Full root SSH access",
+      "All 6 locations",
       "24/7 priority support",
-      "Real-time backups",
       "API + webhooks",
-      "SLA guarantee",
     ],
     highlighted: false,
   },
@@ -92,8 +91,8 @@ export function Pricing() {
               <span className="text-neutral-400">No hidden fees.</span>
             </h2>
             <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-neutral-500">
-              Every plan includes a dedicated VPS — not shared hosting. 
-              Cancel anytime.
+              Every plan includes a dedicated VPS — not shared hosting.
+              Prices are Hetzner&apos;s exact server cost, no markup. Cancel anytime.
             </p>
           </div>
         </BlurFade>
@@ -186,10 +185,10 @@ export function Pricing() {
         {/* Bottom note */}
         <BlurFade inView delay={0.3}>
           <p className="mt-10 text-center text-[12px] text-neutral-400">
-            All plans include SSL, DNS management, and automatic updates. 
-            Need something custom?{" "}
+            All plans include SSL, DNS management, and full SSH access.
+            Prices shown are Hetzner Cloud base cost (EUR excl. VAT).{" "}
             <Link href="/contact" className="font-medium text-neutral-600 underline underline-offset-2 hover:text-neutral-900">
-              Talk to us
+              Need something custom?
             </Link>
           </p>
         </BlurFade>

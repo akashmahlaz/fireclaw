@@ -28,7 +28,7 @@ export function CTA() {
                 Ready to deploy?
               </h2>
               <p className="max-w-md text-[16px] leading-relaxed text-neutral-400">
-                Your private AI server is 60 seconds away. No credit card needed to start.
+                Your private OpenClaw server is 60 seconds away. Starting from €4.49/mo.
               </p>
 
               <div className="flex flex-col items-center gap-3 sm:flex-row">

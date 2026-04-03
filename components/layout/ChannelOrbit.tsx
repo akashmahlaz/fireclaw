@@ -11,16 +11,16 @@ export function ChannelOrbit() {
         <BlurFade inView delay={0}>
           <div className="mb-14 text-center">
             <p className="mb-4 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">
-              Channels
+              Powered by OpenClaw
             </p>
             <h2 className="text-[36px] font-black leading-[1.1] tracking-[-0.03em] text-neutral-900 sm:text-[44px] lg:text-[52px]">
               Every channel.
               <br />
-              <span className="text-neutral-400">One platform.</span>
+              <span className="text-neutral-400">One deployment.</span>
             </h2>
             <p className="mx-auto mt-5 max-w-lg text-[15px] leading-relaxed text-neutral-500">
-              WhatsApp, Telegram, Discord, Slack, and more — connected to your
-              private OpenClaw instance. Add new channels in one click.
+              Your OpenClaw instance connects to WhatsApp, Telegram, Discord,
+              Slack, and more — all configured on the VPS we deploy for you.
             </p>
           </div>
         </BlurFade>

@@ -11,7 +11,7 @@ import {
 const faqs = [
   {
     q: "What is OpenClaw?",
-    a: "OpenClaw is an open-source AI assistant engine that connects to messaging channels like WhatsApp, Telegram, Discord, and more. FireClaw deploys it on a dedicated server for you — fully configured with SSL, DNS, and health monitoring.",
+    a: "OpenClaw is an open-source AI assistant engine that connects to messaging channels like WhatsApp, Telegram, Discord, and more. FireClaw deploys it on a dedicated VPS for you — fully configured with SSL, DNS, and health monitoring.",
   },
   {
     q: "Is my server shared with other users?",
@@ -19,15 +19,15 @@ const faqs = [
   },
   {
     q: "How long does deployment take?",
-    a: "Under 60 seconds on average. We provision from pre-built server snapshots, so your OpenClaw instance is live almost instantly with SSL and DNS already configured.",
-  },
-  {
-    q: "Can I connect multiple messaging channels?",
-    a: "Yes. Depending on your plan, you can connect up to unlimited channels — WhatsApp, Telegram, Discord, Slack, Signal, iMessage, and more. All from a single dashboard.",
+    a: "Under 60 seconds on average. We provision the VPS, configure DNS, issue SSL, and run health checks — your OpenClaw instance is live almost instantly.",
   },
   {
     q: "What regions are available?",
-    a: "We currently offer EU (Falkenstein, Germany), US (Ashburn, Virginia), and Asia (Singapore). Enterprise plans can request custom regions.",
+    a: "We currently support 6 Hetzner locations: Falkenstein (Germany), Nuremberg (Germany), Helsinki (Finland), Ashburn (Virginia, US), Hillsboro (Oregon, US), and Singapore. More providers coming soon.",
+  },
+  {
+    q: "What are the exact server costs?",
+    a: "Pricing matches Hetzner's exact server cost with no markup: Starter (CX23) €4.49/mo, Standard (CX33) €6.99/mo, Pro (CX43) €12.49/mo, Enterprise (CX53) €22.99/mo. All prices excl. VAT.",
   },
   {
     q: "Can I cancel anytime?",
@@ -39,7 +39,7 @@ const faqs = [
   },
   {
     q: "What happens if my server goes down?",
-    a: "Our monitoring system checks your instance every 30 seconds. If an issue is detected, we automatically restart the service. Pro and Enterprise plans include automatic failover and priority incident response.",
+    a: "Our monitoring system checks your instance regularly. If an issue is detected, we automatically restart the service. Your VPS runs on Hetzner's infrastructure which guarantees 99.9% uptime.",
   },
 ]
 

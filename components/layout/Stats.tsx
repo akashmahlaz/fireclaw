@@ -4,9 +4,27 @@ import { BlurFade } from "@/components/ui/blur-fade"
 import { NumberTicker } from "@/components/ui/number-ticker"
 import { BorderBeam } from "@/components/ui/border-beam"
 import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar"
-import { Clock, Shield, MessageSquare, Globe2 } from "lucide-react"
+import { Clock, Gauge, Globe2, Server } from "lucide-react"
 
 const supportingStats = [
+  {
+    value: 6,
+    suffix: "",
+    label: "Data center locations",
+    icon: Globe2,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-emerald-100",
+  },
+  {
+    value: 4,
+    suffix: "",
+    label: "Performance tiers",
+    icon: Gauge,
+    color: "text-blue-500",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-100",
+  },
   {
     value: 60,
     suffix: "s",
@@ -15,24 +33,6 @@ const supportingStats = [
     color: "text-orange-500",
     bgColor: "bg-orange-50",
     borderColor: "border-orange-100",
-  },
-  {
-    value: 20,
-    suffix: "+",
-    label: "Channels supported",
-    icon: MessageSquare,
-    color: "text-blue-500",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-100",
-  },
-  {
-    value: 3,
-    suffix: "",
-    label: "Global regions",
-    icon: Globe2,
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-100",
   },
 ]
 
@@ -57,16 +57,16 @@ export function Stats() {
         <BlurFade inView delay={0.05}>
           <div className="relative mx-auto mb-10 flex max-w-md flex-col items-center overflow-hidden rounded-3xl border border-neutral-200 bg-linear-to-b from-white to-neutral-50 p-8 shadow-sm sm:p-10">
             <div className="mb-2 flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-full bg-emerald-50">
-                <Shield className="size-4 text-emerald-500" />
+              <div className="flex size-8 items-center justify-center rounded-full bg-orange-50">
+                <Server className="size-4 text-orange-500" />
               </div>
               <span className="text-[12px] font-semibold uppercase tracking-widest text-neutral-400">
-                Uptime SLA
+                Dedicated VPS
               </span>
             </div>
 
             <AnimatedCircularProgressBar
-              value={99.9}
+              value={100}
               max={100}
               gaugePrimaryColor="#f97316"
               gaugeSecondaryColor="#f5f5f5"
@@ -74,9 +74,9 @@ export function Stats() {
             />
 
             <p className="mt-3 text-center text-[13px] leading-relaxed text-neutral-500">
-              Your agent stays online around the clock.
+              Every agent runs on its own isolated VPS.
               <br />
-              Guaranteed by infrastructure-level SLA.
+              Not shared — you get full root access.
             </p>
 
             <BorderBeam

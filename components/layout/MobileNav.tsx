@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from "motion/react"
 
 const navLinks = [
   { label: "Platform", href: "#features" },
-  { label: "Channels", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Docs", href: "/docs" },
   { label: "How It Works", href: "#how-it-works" },
