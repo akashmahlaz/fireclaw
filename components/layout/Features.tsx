@@ -12,7 +12,8 @@ import { BentoCard, BentoGrid } from "@/components/ui/bento-grid"
 import { AnimatedBeam } from "@/components/ui/animated-beam"
 import { AnimatedListItem, AnimatedList } from "@/components/ui/animated-list"
 import { Globe } from "@/components/ui/globe"
-import { Marquee } from "@/components/ui/marquee"
+import { FlickeringGrid } from "@/components/ui/flickering-grid"
+import { DotPattern } from "@/components/ui/dot-pattern"
 import { cn } from "@/lib/utils"
 
 /* ── Background: Animated deploy notifications ── */
@@ -27,11 +28,11 @@ function DeployNotifications() {
   ]
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-4 [mask-image:linear-gradient(to_top,transparent_10%,#000_70%)]">
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-4 mask-[linear-gradient(to_top,transparent_10%,#000_70%)]">
       <AnimatedList delay={2000}>
         {notifications.map((n, i) => (
           <AnimatedListItem key={i}>
-            <div className="mx-auto flex w-full max-w-[260px] items-center gap-3 rounded-lg border border-neutral-100 bg-white px-3 py-2 shadow-sm">
+            <div className="mx-auto flex w-full max-w-65 items-center gap-3 rounded-lg border border-neutral-100 bg-white px-3 py-2 shadow-sm">
               <span
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[14px]"
                 style={{ backgroundColor: `${n.color}15` }}
@@ -79,9 +80,9 @@ function ChannelBeams() {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 flex items-center justify-center overflow-hidden p-6 [mask-image:linear-gradient(to_top,transparent_5%,#000_60%)]"
+      className="absolute inset-0 flex items-center justify-center overflow-hidden p-6 mask-[linear-gradient(to_top,transparent_5%,#000_60%)]"
     >
-      <div className="flex h-full w-full max-w-[280px] items-center justify-between">
+      <div className="flex h-full w-full max-w-70 items-center justify-between">
         <div className="flex flex-col items-center gap-8">
           <Circle ref={waRef}>
             <span className="text-[14px]">💬</span>
@@ -109,48 +110,89 @@ function ChannelBeams() {
 /* ── Background: Globe with server locations ── */
 function ServerGlobe() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden [mask-image:linear-gradient(to_top,transparent_20%,#000_80%)]">
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden mask-[linear-gradient(to_top,transparent_20%,#000_80%)]">
       <Globe className="top-2" />
     </div>
   )
 }
 
-/* ── Background: Security marquee ── */
-function SecurityMarquee() {
-  const items = [
-    "End-to-end encrypted",
-    "SOC 2 compliant",
-    "Dedicated isolation",
-    "SSH key-only access",
-    "Automated backups",
-    "DDoS protection",
-    "Zero-trust network",
-    "TLS 1.3 everywhere",
-  ]
+/* ── Background: Security flickering grid ── */
+function SecurityGrid() {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden px-2 [mask-image:linear-gradient(to_top,transparent_10%,#000_60%)]">
-      <Marquee pauseOnHover className="[--duration:25s]">
-        {items.slice(0, 4).map((item) => (
-          <div
-            key={item}
-            className="flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700"
-          >
-            <Shield className="size-3" />
-            {item}
+    <div className="absolute inset-0 overflow-hidden mask-[linear-gradient(to_top,transparent_15%,#000_70%)]">
+      <FlickeringGrid
+        color="rgb(16, 185, 129)"
+        maxOpacity={0.15}
+        flickerChance={0.08}
+        squareSize={3}
+        gridGap={8}
+        className="size-full"
+      />
+      {/* Floating security badges */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4">
+        <div className="flex items-center gap-2">
+          {["Encrypted", "Isolated", "Zero-trust"].map((label) => (
+            <span
+              key={label}
+              className="flex items-center gap-1.5 rounded-full border border-emerald-200/60 bg-emerald-50/80 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 backdrop-blur-sm"
+            >
+              <Shield className="size-2.5" />
+              {label}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          {["TLS 1.3", "SSH-only", "DDoS Shield"].map((label) => (
+            <span
+              key={label}
+              className="flex items-center gap-1.5 rounded-full border border-emerald-200/60 bg-emerald-50/80 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 backdrop-blur-sm"
+            >
+              <Shield className="size-2.5" />
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Background: Terminal control ── */
+function ServerTerminal() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-6 mask-[linear-gradient(to_top,transparent_10%,#000_60%)]">
+      <div className="w-full max-w-120 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-950 shadow-lg">
+        {/* Title bar */}
+        <div className="flex items-center gap-2 border-b border-neutral-800 px-3 py-2">
+          <div className="flex gap-1.5">
+            <div className="size-2 rounded-full bg-red-500/80" />
+            <div className="size-2 rounded-full bg-yellow-500/80" />
+            <div className="size-2 rounded-full bg-green-500/80" />
           </div>
-        ))}
-      </Marquee>
-      <Marquee reverse pauseOnHover className="[--duration:30s]">
-        {items.slice(4).map((item) => (
-          <div
-            key={item}
-            className="flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700"
-          >
-            <Shield className="size-3" />
-            {item}
+          <span className="ml-2 text-[10px] font-medium text-neutral-500">root@fireclaw-vps</span>
+        </div>
+        {/* Terminal content */}
+        <div className="space-y-1.5 p-3 font-mono text-[11px] leading-relaxed">
+          <div className="text-green-400">$ ssh root@agent.fireclaw.ai</div>
+          <div className="text-neutral-500">Welcome to Ubuntu 24.04 LTS</div>
+          <div className="text-neutral-600">Last login: 2 min ago from 192.168.1.1</div>
+          <div className="mt-2 text-green-400">$ docker ps</div>
+          <div className="text-neutral-400">
+            <span className="text-cyan-400">openclaw </span>
+            <span className="text-emerald-400"> Up 14d </span>
+            <span className="text-neutral-500"> 0.0.0.0:18789→18789</span>
           </div>
-        ))}
-      </Marquee>
+          <div className="text-neutral-400">
+            <span className="text-cyan-400">caddy   </span>
+            <span className="text-emerald-400"> Up 14d </span>
+            <span className="text-neutral-500"> 0.0.0.0:443→443</span>
+          </div>
+          <div className="mt-2 text-green-400">
+            $ fireclaw status
+            <span className="ml-1 inline-block h-3.5 w-1 animate-pulse bg-green-400/70" />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -195,7 +237,7 @@ const features = [
     href: "#",
     cta: "Learn more",
     className: "col-span-3 lg:col-span-1",
-    background: <SecurityMarquee />,
+    background: <SecurityGrid />,
   },
   {
     Icon: Server,
@@ -205,28 +247,23 @@ const features = [
     href: "#",
     cta: "Explore plans",
     className: "col-span-3",
-    background: (
-      <div className="absolute inset-0 [mask-image:linear-gradient(to_top,transparent_10%,#000_60%)]">
-        <Marquee pauseOnHover className="[--duration:40s] mt-8">
-          {["4 vCPU", "8 GB RAM", "160 GB NVMe", "Root SSH", "Custom Domain", "Auto SSL", "Cron Jobs", "API Access", "Webhooks", "Logs"].map((t) => (
-            <span
-              key={t}
-              className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-1.5 text-[11px] font-semibold text-neutral-600"
-            >
-              {t}
-            </span>
-          ))}
-        </Marquee>
-      </div>
-    ),
+    background: <ServerTerminal />,
   },
 ]
 
 /* ── Main Section ── */
 export function Features() {
   return (
-    <section id="features" className="relative bg-white py-24 sm:py-32">
-      <div className="mx-auto max-w-6xl px-6">
+    <section id="features" className="relative bg-neutral-50/60 py-24 sm:py-32">
+      {/* Subtle dot pattern background */}
+      <DotPattern
+        width={20}
+        height={20}
+        cr={1}
+        className="absolute inset-0 text-neutral-300/40 mask-[radial-gradient(ellipse_80%_60%_at_50%_50%,black_40%,transparent)]"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-6">
         <div className="mb-14 text-center">
           <p className="mb-4 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">
             Platform

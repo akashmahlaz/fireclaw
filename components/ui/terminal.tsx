@@ -62,6 +62,7 @@ interface AnimatedSpanProps extends MotionProps {
   delay?: number
   className?: string
   startOnView?: boolean
+  onAppear?: () => void
 }
 
 export const AnimatedSpan = ({
@@ -69,6 +70,7 @@ export const AnimatedSpan = ({
   delay = 0,
   className,
   startOnView = false,
+  onAppear,
   ...props
 }: AnimatedSpanProps) => {
   const elementRef = useRef<HTMLDivElement | null>(null)
@@ -99,6 +101,7 @@ export const AnimatedSpan = ({
       transition={{ duration: 0.3, delay: sequence ? 0 : delay / 1000 }}
       className={cn("grid text-sm font-normal tracking-tight", className)}
       onAnimationComplete={() => {
+        onAppear?.()
         if (!sequence) return
         if (itemIndex === null) return
         sequence.completeItem(itemIndex)
@@ -117,6 +120,8 @@ interface TypingAnimationProps extends Omit<MotionProps, "children"> {
   delay?: number
   as?: MotionElementType
   startOnView?: boolean
+  onCharTyped?: () => void
+  onComplete?: () => void
 }
 
 export const TypingAnimation = ({
@@ -126,6 +131,8 @@ export const TypingAnimation = ({
   delay = 0,
   as: Component = "span",
   startOnView = true,
+  onCharTyped,
+  onComplete,
   ...props
 }: TypingAnimationProps) => {
   if (typeof children !== "string") {
@@ -194,6 +201,7 @@ export const TypingAnimation = ({
       typingEffect = setInterval(() => {
         if (i < children.length) {
           setDisplayedText(children.substring(0, i + 1))
+          onCharTyped?.()
           i++
         } else {
           if (typingEffect !== null) {
@@ -204,6 +212,7 @@ export const TypingAnimation = ({
           if (completeItem && currentItemIndex !== null) {
             completeItem(currentItemIndex)
           }
+          onComplete?.()
         }
       }, duration)
     }

@@ -6,8 +6,11 @@ import {
   Terminal,
   TypingAnimation,
 } from "@/components/ui/terminal"
+import { useTerminalSounds } from "@/hooks/use-terminal-sounds"
 
 export function TerminalShowcase() {
+  const { playSound } = useTerminalSounds()
+
   return (
     <section className="relative bg-white py-28 sm:py-36">
       <div className="mx-auto max-w-6xl px-6">
@@ -33,44 +36,71 @@ export function TerminalShowcase() {
         {/* Terminal */}
         <BlurFade inView delay={0.1}>
           <Terminal className="mx-auto max-w-5xl rounded-2xl border-neutral-200 bg-neutral-950 shadow-2xl shadow-neutral-900/20">
-            <TypingAnimation className="text-green-400 font-semibold mb-2">
+            <TypingAnimation
+              className="text-green-400 font-semibold mb-2"
+              onCharTyped={() => playSound("keystroke")}
+            >
               {"$ fireclaw deploy --tier standard --region eu-central"}
             </TypingAnimation>
 
-            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+            <AnimatedSpan
+              className="text-neutral-500 font-bold mb-1"
+              onAppear={() => playSound("phase")}
+            >
               <span>  [1/4] Authentication & Capacity</span>
             </AnimatedSpan>
             <AnimatedSpan className="text-neutral-500">
               <span>  → Authenticated as akash@fireclaw.ai (workspace: default)</span>
             </AnimatedSpan>
-            <AnimatedSpan className="text-emerald-400 mb-2">
+            <AnimatedSpan
+              className="text-emerald-400 mb-2"
+              onAppear={() => playSound("success")}
+            >
               <span>  ✓ Capacity reserved in eu-central isolated pool</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+            <AnimatedSpan
+              className="text-neutral-500 font-bold mb-1"
+              onAppear={() => playSound("phase")}
+            >
               <span>  [2/4] Provisioning Infrastructure</span>
             </AnimatedSpan>
             <AnimatedSpan className="text-neutral-500">
               <span>  → Booting dedicated instance from secure OS snapshot...</span>
             </AnimatedSpan>
-            <AnimatedSpan className="text-emerald-400 mb-2">
+            <AnimatedSpan
+              className="text-emerald-400 mb-2"
+              onAppear={() => playSound("success")}
+            >
               <span>  ✓ Dedicated VPS running (CX33 · 4 vCPU · 8 GB RAM)</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+            <AnimatedSpan
+              className="text-neutral-500 font-bold mb-1"
+              onAppear={() => playSound("phase")}
+            >
               <span>  [3/4] Security & Routing</span>
             </AnimatedSpan>
             <AnimatedSpan className="text-neutral-500">
               <span>  → Allocating static IPv4/IPv6 block...</span>
             </AnimatedSpan>
-            <AnimatedSpan className="text-emerald-400">
+            <AnimatedSpan
+              className="text-emerald-400"
+              onAppear={() => playSound("success")}
+            >
               <span>  ✓ DNS successfully propagated (akash-7x2f.fireclaw.ai)</span>
             </AnimatedSpan>
-            <AnimatedSpan className="text-emerald-400 mb-2">
+            <AnimatedSpan
+              className="text-emerald-400 mb-2"
+              onAppear={() => playSound("success")}
+            >
               <span>  ✓ TLS/SSL certificate issued and verified</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-neutral-500 font-bold mb-1">
+            <AnimatedSpan
+              className="text-neutral-500 font-bold mb-1"
+              onAppear={() => playSound("phase")}
+            >
               <span>  [4/4] Deploying OpenClaw Core</span>
             </AnimatedSpan>
             <AnimatedSpan className="text-neutral-500">
@@ -79,10 +109,16 @@ export function TerminalShowcase() {
             <AnimatedSpan className="text-neutral-500">
               <span>  → Initializing secure Postgres vector database...</span>
             </AnimatedSpan>
-            <AnimatedSpan className="text-emerald-400">
+            <AnimatedSpan
+              className="text-emerald-400"
+              onAppear={() => playSound("success")}
+            >
               <span>  ✓ Gateway services booted on :18789</span>
             </AnimatedSpan>
-            <AnimatedSpan className="text-emerald-400 mb-3">
+            <AnimatedSpan
+              className="text-emerald-400 mb-3"
+              onAppear={() => playSound("success")}
+            >
               <span>  ✓ Health check passed (HTTP 200 OK)</span>
             </AnimatedSpan>
 
@@ -90,7 +126,10 @@ export function TerminalShowcase() {
               <span>  ─────────────────────────────────────────────────────────────</span>
             </AnimatedSpan>
 
-            <AnimatedSpan className="text-white font-bold text-[15px] mt-1">
+            <AnimatedSpan
+              className="text-white font-bold text-[15px] mt-1"
+              onAppear={() => playSound("deploy")}
+            >
               <span>  🚀 Your OpenClaw instance is live!</span>
             </AnimatedSpan>
             <AnimatedSpan className="text-orange-400 font-medium mb-1">
@@ -101,7 +140,10 @@ export function TerminalShowcase() {
               <span>  Deploy time: 47.3s · Uptime SLA: 99.99% · Status: Healthy</span>
             </AnimatedSpan>
 
-            <TypingAnimation className="text-neutral-600 mt-2">
+            <TypingAnimation
+              className="text-neutral-600 mt-2"
+              onCharTyped={() => playSound("keystroke")}
+            >
               {"  Next step: run `fireclaw connect whatsapp`"}
             </TypingAnimation>
           </Terminal>
