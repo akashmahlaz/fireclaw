@@ -9,7 +9,7 @@ export default async function Navbar() {
   const isLoggedIn = !!session
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-neutral-100 bg-white/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-neutral-100 bg-white backdrop-blur-xl md:bg-white/95">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
         {/* Wordmark */}
         <Link
