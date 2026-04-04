@@ -276,7 +276,6 @@ export function DeployWizardClient() {
   const handleDeploy = useCallback(async () => {
     setDeploying(true)
     setDeployError(null)
-    setProvisionLog([])
     try {
       const res = await fetch("/api/agents", {
         method: "POST",

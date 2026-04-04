@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         await pushProvisionLog(agentId, `🚀 Live at https://${domain}`, "ok");
         console.log(`[deploy] Agent ${agentId}: ✅ RUNNING at https://${domain}`);
         // Send success email (non-blocking)
-        if (session.user.email) {
+        if (session.user?.email) {
           sendDeploySuccessEmail(session.user.email, name.trim(), domain).catch(() => {});
         }
       } else {
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       await pushProvisionLog(agentId, `Provisioning error: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
       await updateAgent(agentId, userId, { status: "error" });
       // Send failure email (non-blocking)
-      if (session.user.email) {
+      if (session.user?.email) {
         sendDeployFailureEmail(session.user.email, name.trim(), err instanceof Error ? err.message : "Unknown error").catch(() => {});
       }
     });
