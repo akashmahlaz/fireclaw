@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, Mail, Lock, User, Eye, EyeOff, ArrowLeft } from "lucide-react"
@@ -9,6 +9,18 @@ import { cn } from "@/lib/utils"
 type Mode = "signin" | "signup" | "verify-email" | "forgot" | "forgot-otp" | "reset-password"
 
 export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+        <Loader2 className="size-6 animate-spin text-neutral-400" />
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
+  )
+}
+
+function SignInContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
