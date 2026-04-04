@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   title: "FireClaw — Deploy OpenClaw in Seconds",
   description:
     "One-click deploy your personal AI assistant on a dedicated VPS. Full control over WhatsApp, Telegram, Discord and 20+ channels.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: "/apple-icon.svg",
+  },
 };
 
 export default function RootLayout({

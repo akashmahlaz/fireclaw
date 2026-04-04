@@ -1,0 +1,20 @@
+<svg width="720" height="160" viewBox="0 0 720 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon mark -->
+  <rect width="160" height="160" rx="35" fill="#F97316"/>
+  <path fill-rule="evenodd" d="
+    M 46 32
+    H 114
+    V 53
+    H 70
+    V 72
+    H 104
+    V 93
+    H 70
+    V 115
+    L 84 128
+    H 46
+    Z
+  " fill="white"/>
+  <!-- Wordmark: FIRECLAW in Inter Black style -->
+  <text x="184" y="113" fill="#171717" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="900" font-size="72" letter-spacing="8">FIRECLAW</text>
+</svg>

@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rounded-square background -->
+  <rect width="512" height="512" rx="112" fill="#F97316"/>
+  <!--
+    Bold "F" with an angled cut at the bottom of the stem.
+    The diagonal gives it a claw/blade feel without being gimmicky.
+    Coordinates designed on a 512×512 grid so it stays crisp at any size.
+  -->
+  <path fill-rule="evenodd" d="
+    M 148 104
+    H 364
+    V 172
+    H 224
+    V 232
+    H 332
+    V 300
+    H 224
+    V 368
+    L 268 408
+    H 148
+    Z
+  " fill="white"/>
+</svg>

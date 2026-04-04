@@ -1,0 +1,17 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="40" fill="#F97316"/>
+  <path fill-rule="evenodd" d="
+    M 52 36
+    H 128
+    V 60
+    H 79
+    V 81
+    H 118
+    V 105
+    H 79
+    V 129
+    L 94 144
+    H 52
+    Z
+  " fill="white"/>
+</svg>
