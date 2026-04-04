@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { Menu, X, ArrowRight } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
@@ -96,25 +95,21 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                   </Link>
                 ) : (
                   <>
-                    <button
-                      onClick={() => {
-                        setOpen(false)
-                        signIn("google", { redirectTo: "/dashboard" })
-                      }}
-                      className="w-full rounded-full border border-neutral-200 px-5 py-3 text-[14px] font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                    <Link
+                      href="/auth/signin"
+                      onClick={() => setOpen(false)}
+                      className="w-full rounded-full border border-neutral-200 px-5 py-3 text-center text-[14px] font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
                     >
                       Log in
-                    </button>
-                    <button
-                      onClick={() => {
-                        setOpen(false)
-                        signIn("google", { redirectTo: "/dashboard" })
-                      }}
+                    </Link>
+                    <Link
+                      href="/auth/signin"
+                      onClick={() => setOpen(false)}
                       className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 px-5 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-neutral-700"
                     >
                       Get started
                       <ArrowRight className="size-4" />
-                    </button>
+                    </Link>
                   </>
                 )}
               </div>

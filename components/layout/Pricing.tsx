@@ -167,7 +167,7 @@ export function Pricing() {
 
                 {/* CTA */}
                 <Link
-                  href="/dashboard"
+                  href="/auth/signin"
                   className={`mt-6 flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[14px] font-semibold transition-all duration-200 ${
                     plan.highlighted
                       ? "bg-neutral-900 text-white shadow-lg shadow-neutral-900/20 hover:bg-neutral-700"

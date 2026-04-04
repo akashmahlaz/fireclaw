@@ -1,6 +1,5 @@
 "use client"
 
-import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
@@ -21,19 +20,19 @@ export function NavActions({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <div className="hidden items-center gap-3 md:flex">
-      <button
-        onClick={() => signIn("google", { redirectTo: "/dashboard" })}
+      <Link
+        href="/auth/signin"
         className="text-[13px] font-medium text-neutral-500 transition-colors hover:text-neutral-900"
       >
         Log in
-      </button>
-      <button
-        onClick={() => signIn("google", { redirectTo: "/dashboard" })}
+      </Link>
+      <Link
+        href="/auth/signin"
         className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-700"
       >
         Get started
         <ArrowRight className="size-3.5" />
-      </button>
+      </Link>
     </div>
   )
 }

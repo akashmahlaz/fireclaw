@@ -1,9 +1,12 @@
-
 "use client"
 
-import { signIn } from "next-auth/react"
+import Link from "next/link"
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button"
  
 export default function SignIn() {
-  return <InteractiveHoverButton onClick={() => signIn("google", { redirectTo: "/dashboard" } )}>SignIn</InteractiveHoverButton>
+  return (
+    <Link href="/auth/signin">
+      <InteractiveHoverButton>Sign In</InteractiveHoverButton>
+    </Link>
+  )
 }
