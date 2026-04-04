@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { NavDesktop } from "./NavDesktop"
 import { NavActions } from "./NavActions"
 import { MobileNav } from "./MobileNav"
+import { FireclawLogo } from "./FireclawLogo"
 
 export default async function Navbar() {
   const session = await auth()
@@ -11,12 +12,15 @@ export default async function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-neutral-100 bg-white backdrop-blur-xl md:bg-white/95">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-        {/* Wordmark */}
+        {/* Logo + Wordmark */}
         <Link
           href="/"
-          className="shrink-0 text-sm font-black tracking-[0.12em] text-neutral-900 uppercase"
+          className="flex shrink-0 items-center gap-2.5"
         >
-          FIRECLAW
+          <FireclawLogo size={28} />
+          <span className="text-sm font-black tracking-[0.12em] text-neutral-900 uppercase">
+            FIRECLAW
+          </span>
         </Link>
 
         {/* Desktop mega-menu */}
