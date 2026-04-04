@@ -155,3 +155,57 @@ function escapeHtml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
 }
+
+export async function sendVerificationOTP(to: string, code: string) {
+  const resend = getClient()
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${code} — Verify your email`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
+        <h1 style="font-size: 24px; font-weight: 800; color: #171717; margin-bottom: 16px;">
+          Verify your email
+        </h1>
+        <p style="font-size: 14px; color: #525252; line-height: 1.6;">
+          Enter this code to verify your FireClaw account:
+        </p>
+        <div style="margin: 24px 0; padding: 20px; background: #f5f5f5; border-radius: 12px; text-align: center;">
+          <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #171717; font-family: monospace;">
+            ${escapeHtml(code)}
+          </span>
+        </div>
+        <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">
+          This code expires in 10 minutes. If you didn't create a FireClaw account, ignore this email.
+        </p>
+      </div>
+    `,
+  })
+}
+
+export async function sendPasswordResetOTP(to: string, code: string) {
+  const resend = getClient()
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${code} — Reset your password`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
+        <h1 style="font-size: 24px; font-weight: 800; color: #171717; margin-bottom: 16px;">
+          Reset your password
+        </h1>
+        <p style="font-size: 14px; color: #525252; line-height: 1.6;">
+          Enter this code to reset your FireClaw password:
+        </p>
+        <div style="margin: 24px 0; padding: 20px; background: #f5f5f5; border-radius: 12px; text-align: center;">
+          <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #171717; font-family: monospace;">
+            ${escapeHtml(code)}
+          </span>
+        </div>
+        <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">
+          This code expires in 10 minutes. If you didn't request a password reset, ignore this email.
+        </p>
+      </div>
+    `,
+  })
+}

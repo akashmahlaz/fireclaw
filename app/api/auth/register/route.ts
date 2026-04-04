@@ -1,6 +1,7 @@
 import { createUserWithCredentials } from "@/lib/auth-utils"
 import { rateLimitByIp } from "@/lib/rate-limit"
-import { sendWelcomeEmail } from "@/lib/email"
+import { sendVerificationOTP } from "@/lib/email"
+import { createOTP } from "@/lib/otp"
 import { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -31,10 +32,11 @@ export async function POST(request: NextRequest) {
       password,
     })
 
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail(user.email, user.name).catch(() => {})
+    // Send verification OTP (non-blocking — user will verify on the next screen)
+    const code = await createOTP(user.email, "email-verify")
+    sendVerificationOTP(user.email, code).catch(() => {})
 
-    return Response.json({ success: true, user: { id: user.id, email: user.email, name: user.name } }, { status: 201 })
+    return Response.json({ success: true, needsVerification: true, user: { id: user.id, email: user.email, name: user.name } }, { status: 201 })
   } catch (err) {
     if (err instanceof Error && err.message === "Email already registered") {
       return Response.json({ error: "Email already registered" }, { status: 409 })

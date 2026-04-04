@@ -29,6 +29,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await getUserByEmail(email)
         if (!user || !user.hashedPassword) return null
 
+        // Block unverified email users
+        if (!user.emailVerified) return null
+
         const isValid = await verifyPassword(password, user.hashedPassword)
         if (!isValid) return null
 
