@@ -91,7 +91,7 @@ export function TerminalShowcase() {
               className="text-emerald-400 mb-2"
               onAppear={() => playSound("success")}
             >
-              <span>  ✓ Dedicated VPS running (CX33 · 4 vCPU · 8 GB RAM)</span>
+              <span>  ✓ Dedicated VPS running (4 vCPU · 8 GB RAM)</span>
             </AnimatedSpan>
 
             <AnimatedSpan

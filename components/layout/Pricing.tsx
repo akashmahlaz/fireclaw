@@ -12,7 +12,7 @@ const plans = [
     price: "€4.49",
     period: "/mo",
     description: "Perfect for testing and personal projects.",
-    specs: "CX23 · 2 vCPU · 4 GB RAM · 40 GB NVMe",
+    specs: "2 vCPU · 4 GB RAM · 40 GB NVMe",
     features: [
       "1 OpenClaw instance",
       "Dedicated VPS — not shared",
@@ -27,7 +27,7 @@ const plans = [
     price: "€6.99",
     period: "/mo",
     description: "For creators and small teams.",
-    specs: "CX33 · 4 vCPU · 8 GB RAM · 80 GB NVMe",
+    specs: "4 vCPU · 8 GB RAM · 80 GB NVMe",
     features: [
       "1 OpenClaw instance",
       "Dedicated VPS — not shared",
@@ -44,7 +44,7 @@ const plans = [
     period: "/mo",
     badge: "Most Popular",
     description: "For businesses scaling fast.",
-    specs: "CX43 · 8 vCPU · 16 GB RAM · 160 GB NVMe",
+    specs: "8 vCPU · 16 GB RAM · 160 GB NVMe",
     features: [
       "Up to 3 instances",
       "Dedicated VPS — not shared",
@@ -61,7 +61,7 @@ const plans = [
     price: "€22.99",
     period: "/mo",
     description: "Maximum power for demanding workloads.",
-    specs: "CX53 · 16 vCPU · 32 GB RAM · 320 GB NVMe",
+    specs: "16 vCPU · 32 GB RAM · 320 GB NVMe",
     features: [
       "Unlimited instances",
       "Dedicated VPS — not shared",
@@ -92,7 +92,7 @@ export function Pricing() {
             </h2>
             <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-neutral-500">
               Every plan includes a dedicated VPS — not shared hosting.
-              Prices are Hetzner&apos;s exact server cost, no markup. Cancel anytime.
+              No hidden fees, no markup. Cancel anytime.
             </p>
           </div>
         </BlurFade>
@@ -186,7 +186,7 @@ export function Pricing() {
         <BlurFade inView delay={0.3}>
           <p className="mt-10 text-center text-[12px] text-neutral-400">
             All plans include SSL, DNS management, and full SSH access.
-            Prices shown are Hetzner Cloud base cost (EUR excl. VAT).{" "}
+            All prices in EUR excl. VAT.{" "}
             <Link href="/contact" className="font-medium text-neutral-600 underline underline-offset-2 hover:text-neutral-900">
               Need something custom?
             </Link>

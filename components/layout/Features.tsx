@@ -14,8 +14,8 @@ import {
   Terminal as TerminalIcon,
 } from "lucide-react"
 
-/* ── Hetzner real locations ─────────────────────────────────────── */
-const HETZNER_LOCATIONS = [
+/* ── FireClaw data center locations ──────────────────────────────── */
+const DC_LOCATIONS = [
   { name: "fsn1", city: "Falkenstein", flag: "🇩🇪", lat: 50.478, lng: 12.338 },
   { name: "nbg1", city: "Nuremberg", flag: "🇩🇪", lat: 49.4521, lng: 11.0767 },
   { name: "hel1", city: "Helsinki", flag: "🇫🇮", lat: 60.1699, lng: 24.9384 },
@@ -38,7 +38,7 @@ const globeConfig: COBEOptions = {
   baseColor: [1, 1, 1],
   markerColor: [0.96, 0.4, 0.1],
   glowColor: [0.97, 0.97, 0.97],
-  markers: HETZNER_LOCATIONS.map((l) => ({
+  markers: DC_LOCATIONS.map((l) => ({
     location: [l.lat, l.lng] as [number, number],
     size: 0.08,
   })),
@@ -52,14 +52,19 @@ function GlobalLocationsVisual() {
       <div className="relative aspect-square w-full max-w-130">
         <Globe className="relative! inset-auto! max-w-none!" config={globeConfig} />
       </div>
-      <div className="absolute bottom-5 left-0 right-0 flex flex-wrap items-center justify-center gap-2 px-4">
-        {HETZNER_LOCATIONS.map((l) => (
-          <span
+      {/* Flag badges overlaid at bottom */}
+      <div className="absolute bottom-4 left-0 right-0 flex flex-wrap items-center justify-center gap-2 px-4">
+        {DC_LOCATIONS.map((l, i) => (
+          <motion.span
             key={l.name}
-            className="rounded-full border border-neutral-200 bg-white/90 px-2.5 py-1 text-[11px] font-medium text-neutral-600 shadow-sm backdrop-blur-sm"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 + i * 0.08, duration: 0.3 }}
+            className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white/95 px-3 py-1.5 text-[12px] font-medium text-neutral-700 shadow-sm backdrop-blur-sm"
           >
-            {l.flag} {l.city}
-          </span>
+            <span className="text-[14px] leading-none">{l.flag}</span>
+            {l.city}
+          </motion.span>
         ))}
       </div>
     </div>
@@ -79,7 +84,7 @@ function OneClickDeployVisual() {
         <div className="space-y-1.5 p-4 font-mono text-[12px] leading-relaxed">
           <div className="text-green-400">$ fireclaw deploy --tier standard</div>
           <div className="text-neutral-500">→ Provisioning VPS in eu-central...</div>
-          <div className="text-emerald-400">✓ VPS online (CX33 · 4 vCPU · 8 GB)</div>
+          <div className="text-emerald-400">✓ VPS online (4 vCPU · 8 GB RAM)</div>
           <div className="text-emerald-400">✓ DNS propagated · SSL issued</div>
           <div className="text-emerald-400">✓ OpenClaw deployed · Health OK</div>
           <div className="mt-2 font-semibold text-white">🚀 Live in 47s → agent.fireclaw.ai</div>
@@ -233,47 +238,52 @@ const features = [
     icon: Globe2,
     title: "6+ Global Locations",
     description:
-      "Falkenstein, Nuremberg, Helsinki, Ashburn, Hillsboro, Singapore — with real-time availability. AWS regions coming soon.",
-    visual: <GlobalLocationsVisual />,
+      "Falkenstein, Nuremberg, Helsinki, Ashburn, Hillsboro, Singapore — with real-time availability. More regions coming soon.",
   },
   {
     icon: Zap,
     title: "One-Click Deploy",
     description:
       "Pick a tier and region — we provision a VPS, configure DNS, issue SSL, and run health checks. Live in under 60 seconds.",
-    visual: <OneClickDeployVisual />,
   },
   {
     icon: LayoutDashboard,
     title: "Multi-Agent Dashboard",
     description:
       "Deploy and manage multiple AI agents from one place. Monitor status, restart containers — built for agencies.",
-    visual: <MultiAgentVisual />,
   },
   {
     icon: Gauge,
     title: "4 Performance Tiers",
     description:
-      "Starter (2 vCPU) to Enterprise (16+ vCPU). Live pricing from the provider — you always get the cheapest available type.",
-    visual: <PerformanceTiersVisual />,
+      "Starter (2 vCPU) to Enterprise (16+ vCPU). Transparent pricing — you always see what you pay.",
   },
   {
     icon: Lock,
     title: "Auto SSL & Custom Domains",
     description:
-      "Auto-provisioned TLS via Caddy on every fireclaw.ai subdomain. Bring your own domain — we handle Cloudflare DNS.",
-    visual: <SSLDomainsVisual />,
+      "Auto-provisioned TLS via Caddy on every fireclaw.ai subdomain. Bring your own domain — we handle DNS.",
   },
   {
     icon: TerminalIcon,
     title: "Full Root SSH Access",
     description:
       "Every agent runs on a dedicated VPS you fully control. SSH in, install packages, run scripts — it's your server.",
-    visual: <SSHAccessVisual />,
   },
 ]
 
 const AUTO_ROTATE_MS = 5000
+
+/* ── Visual Components (rendered once, toggled via opacity) ───── */
+
+const VisualComponents = [
+  GlobalLocationsVisual,
+  OneClickDeployVisual,
+  MultiAgentVisual,
+  PerformanceTiersVisual,
+  SSLDomainsVisual,
+  SSHAccessVisual,
+]
 
 /* ── Main Section ───────────────────────────────────────────────── */
 
@@ -353,17 +363,20 @@ export function Features() {
                       >
                         {f.title}
                       </div>
-                      {isActive && (
-                        <motion.p
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="mt-1 text-[13px] leading-relaxed text-neutral-500"
-                        >
-                          {f.description}
-                        </motion.p>
-                      )}
+                      <AnimatePresence mode="wait">
+                        {isActive && (
+                          <motion.p
+                            key={f.title}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="mt-1 text-[13px] leading-relaxed text-neutral-500"
+                          >
+                            {f.description}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </button>
                 )
@@ -384,20 +397,20 @@ export function Features() {
               </div>
             </div>
 
-            {/* Right — visual panel */}
+            {/* Right — visual panel (all visuals rendered, only active visible) */}
             <div className="relative min-h-100 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 sm:min-h-120">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={active}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="absolute inset-0"
+              {VisualComponents.map((Visual, i) => (
+                <div
+                  key={i}
+                  className="absolute inset-0 transition-opacity duration-300"
+                  style={{
+                    opacity: i === active ? 1 : 0,
+                    pointerEvents: i === active ? "auto" : "none",
+                  }}
                 >
-                  {features[active].visual}
-                </motion.div>
-              </AnimatePresence>
+                  <Visual />
+                </div>
+              ))}
             </div>
           </div>
         </BlurFade>

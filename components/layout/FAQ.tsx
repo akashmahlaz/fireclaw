@@ -23,11 +23,11 @@ const faqs = [
   },
   {
     q: "What regions are available?",
-    a: "We currently support 6 Hetzner locations: Falkenstein (Germany), Nuremberg (Germany), Helsinki (Finland), Ashburn (Virginia, US), Hillsboro (Oregon, US), and Singapore. More providers coming soon.",
+    a: "We currently support 6 data center locations: Falkenstein (Germany), Nuremberg (Germany), Helsinki (Finland), Ashburn (Virginia, US), Hillsboro (Oregon, US), and Singapore. More regions coming soon.",
   },
   {
     q: "What are the exact server costs?",
-    a: "Pricing matches Hetzner's exact server cost with no markup: Starter (CX23) €4.49/mo, Standard (CX33) €6.99/mo, Pro (CX43) €12.49/mo, Enterprise (CX53) €22.99/mo. All prices excl. VAT.",
+    a: "Starter €4.49/mo, Standard €6.99/mo, Pro €12.49/mo, Enterprise €22.99/mo. All prices excl. VAT. No hidden fees — what you see is what you pay.",
   },
   {
     q: "Can I cancel anytime?",
@@ -39,7 +39,7 @@ const faqs = [
   },
   {
     q: "What happens if my server goes down?",
-    a: "Our monitoring system checks your instance regularly. If an issue is detected, we automatically restart the service. Your VPS runs on Hetzner's infrastructure which guarantees 99.9% uptime.",
+    a: "Our monitoring system checks your instance regularly. If an issue is detected, we automatically restart the service. All VPS infrastructure is backed by enterprise-grade data centers with 99.9% uptime.",
   },
 ]
 

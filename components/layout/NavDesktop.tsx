@@ -19,15 +19,38 @@ const navItems: Array<{ label: string; href?: string; dropdown?: DropdownDef }> 
           items: [
             { name: "1-Click Deploy", desc: "Launch OpenClaw on a dedicated VPS in seconds", href: "/dashboard" },
             { name: "VPS Tiers", desc: "Starter, Standard, Pro, Enterprise", href: "#pricing" },
-            { name: "Regions", desc: "6 locations across US, EU, and Asia", href: "#pricing" },
+            { name: "Regions", desc: "6 locations across US, EU, and Asia", href: "#features" },
           ],
         },
         {
           title: "Manage",
           items: [
             { name: "Dashboard", desc: "Monitor, reboot, resize your instances", href: "/dashboard" },
-            { name: "Custom Domains", desc: "Bring your own domain with SSL", href: "/dashboard" },
+            { name: "Custom Domains", desc: "Bring your own domain with auto SSL", href: "/dashboard" },
             { name: "SSH Access", desc: "Full root access to your VPS", href: "/dashboard" },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    label: "SOLUTIONS",
+    dropdown: {
+      sections: [
+        {
+          title: "Use Cases",
+          items: [
+            { name: "Agencies", desc: "Deploy AI agents for multiple clients from one dashboard", href: "#features" },
+            { name: "SaaS Builders", desc: "White-label OpenClaw as your own AI product", href: "#features" },
+            { name: "Support Teams", desc: "24/7 AI support on WhatsApp, Telegram & more", href: "#features" },
+          ],
+        },
+        {
+          title: "Infrastructure",
+          items: [
+            { name: "Cloud Infrastructure", desc: "6 global locations, from €4.49/mo", href: "#pricing" },
+            { name: "More Regions", desc: "US, EU, APAC — more coming soon", href: "#pricing" },
+            { name: "OpenClaw Engine", desc: "Open-source AI assistant powering every deploy", href: "#faq" },
           ],
         },
       ],
