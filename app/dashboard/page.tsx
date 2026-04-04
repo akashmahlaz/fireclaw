@@ -5,7 +5,7 @@ import { OverviewClient } from "@/components/dashboard/overview-client"
 
 export default async function DashboardOverview() {
   const session = await auth()
-  if (!session?.user?.id) redirect("/api/auth/signin")
+  if (!session?.user?.id) redirect("/auth/signin")
 
   const [agents, agentCount] = await Promise.all([
     getAgentsByUser(session.user.id),

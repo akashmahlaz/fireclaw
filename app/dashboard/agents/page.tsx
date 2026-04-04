@@ -5,7 +5,7 @@ import { AgentsClient } from "@/components/dashboard/agents-client"
 
 export default async function AgentsPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect("/api/auth/signin")
+  if (!session?.user?.id) redirect("/auth/signin")
 
   const agents = await getAgentsByUser(session.user.id)
 

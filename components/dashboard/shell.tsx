@@ -17,6 +17,7 @@ import { signOut } from "next-auth/react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { AnimatePresence, motion } from "motion/react"
+import { useSyncPlanStore } from "@/hooks/use-sync-plan"
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +37,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Sync subscription data into Zustand store
+  useSyncPlanStore()
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard"

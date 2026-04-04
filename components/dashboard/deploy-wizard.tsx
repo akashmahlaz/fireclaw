@@ -16,6 +16,8 @@ import { BlurFade } from "@/components/ui/blur-fade"
 import { BorderBeam } from "@/components/ui/border-beam"
 import { cn } from "@/lib/utils"
 import { Confetti, type ConfettiRef } from "@/components/ui/confetti"
+import { useAvailability, useAgent } from "@/hooks/use-queries"
+import { useQueryClient } from "@tanstack/react-query"
 
 declare global {
   interface Window {
@@ -99,6 +101,7 @@ const REGION_LABELS: Record<string, string> = {
 
 export function DeployWizardClient() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const confettiRef = useRef<ConfettiRef>(null)
   const [step, setStep] = useState(0)
   const [deploying, setDeploying] = useState(false)
@@ -106,12 +109,6 @@ export function DeployWizardClient() {
   const [deployed, setDeployed] = useState(false)
   const [deployError, setDeployError] = useState<string | null>(null)
   const [agentId, setAgentId] = useState<string | null>(null)
-  const [agentDomain, setAgentDomain] = useState<string | null>(null)
-  const [provisionLog, setProvisionLog] = useState<ProvisionLogEntry[]>([])
-
-  // Live availability from Hetzner
-  const [availability, setAvailability] = useState<AvailabilityData | null>(null)
-  const [availLoading, setAvailLoading] = useState(true)
 
   // Form state
   const [name, setName] = useState("")
@@ -119,25 +116,28 @@ export function DeployWizardClient() {
   const [tier, setTier] = useState("")
   const [apiKey, setApiKey] = useState("")
 
-  // Fetch live availability on mount
+  // TanStack Query: fetch live availability (cached 5min)
+  const { data: availability, isLoading: availLoading } = useAvailability() as {
+    data: AvailabilityData | undefined
+    isLoading: boolean
+  }
+
+  // TanStack Query: poll agent status every 3s while deploying
+  const { data: polledAgent } = useAgent(agentId, {
+    refetchInterval: deploying && !deployed && !deployError ? 3000 : false,
+  })
+
+  // Default to first region when availability loads
   useEffect(() => {
-    fetch("/api/hetzner/availability")
-      .then((r) => r.json())
-      .then((data: AvailabilityData) => {
-        setAvailability(data)
-        // Default to first location
-        if (data.locations.length > 0 && !region) {
-          setRegion(data.locations[0].id)
-        }
-      })
-      .catch((err) => console.error("Failed to load availability:", err))
-      .finally(() => setAvailLoading(false))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (availability?.locations?.length && !region) {
+      setRegion(availability.locations[0].id)
+    }
+  }, [availability]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-select first available tier when region changes
   useEffect(() => {
     if (!availability) return
-    const loc = availability.locations.find((l) => l.id === region)
+    const loc = availability.locations.find((l: LocationInfo) => l.id === region)
     if (!loc) return
     const availTiers = Object.keys(loc.tiers)
     if (availTiers.length > 0 && (!tier || !loc.tiers[tier])) {
@@ -146,57 +146,38 @@ export function DeployWizardClient() {
   }, [region, availability]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Helper: get current location & tier option
-  const currentLocation = availability?.locations.find((l) => l.id === region)
+  const currentLocation = availability?.locations.find((l: LocationInfo) => l.id === region)
   const currentTierOption = currentLocation?.tiers[tier]
 
-  // Poll agent status once deploying
+  // Derive provision log / domain / status from polled agent data
+  const provisionLog = polledAgent?.provisionLog ?? []
+  const agentDomain = polledAgent?.domain ?? null
+
+  // Detect deploy success/failure from polled data
   useEffect(() => {
-    if (!agentId || deployed || deployError) return
+    if (!polledAgent || deployed || deployError) return
 
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/agents/${agentId}`)
-        if (!res.ok) return
-        const agent = await res.json()
+    const logShowsLive = polledAgent.provisionLog?.some(
+      (e: ProvisionLogEntry) => e.step.startsWith("🚀 Live at") && e.status === "ok"
+    )
 
-        if (agent.provisionLog) {
-          setProvisionLog(agent.provisionLog)
-        }
-        if (agent.domain) {
-          setAgentDomain(agent.domain)
-        }
-
-        // Detect success: either status is "running" OR the provision
-        // log contains the "Live at" entry (fallback if Vercel killed
-        // the function before status was updated)
-        const logShowsLive = agent.provisionLog?.some(
-          (e: ProvisionLogEntry) => e.step.startsWith("🚀 Live at") && e.status === "ok"
-        )
-        if (agent.status === "running" || logShowsLive) {
-          if (agent.status !== "running") {
-            // Fix the status in DB since the backend didn't get to it
-            fetch(`/api/agents/${agentId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: "running" }),
-            }).catch(() => {})
-          }
-          setDeployed(true)
-          setDeploying(false)
-          clearInterval(interval)
-          setTimeout(() => confettiRef.current?.fire({}), 500)
-        } else if (agent.status === "error") {
-          setDeployError("Provisioning failed. Check logs below.")
-          setDeploying(false)
-          clearInterval(interval)
-        }
-      } catch {
-        // Ignore transient fetch errors
+    if (polledAgent.status === "running" || logShowsLive) {
+      if (polledAgent.status !== "running" && agentId) {
+        fetch(`/api/agents/${agentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "running" }),
+        }).catch(() => {})
       }
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [agentId, deployed, deployError])
+      setDeployed(true)
+      setDeploying(false)
+      queryClient.invalidateQueries({ queryKey: ["agents"] })
+      setTimeout(() => confettiRef.current?.fire({}), 500)
+    } else if (polledAgent.status === "error") {
+      setDeployError("Provisioning failed. Check logs below.")
+      setDeploying(false)
+    }
+  }, [polledAgent, deployed, deployError, agentId, queryClient])
 
   const loadRazorpayScript = useCallback(async () => {
     if (window.Razorpay) return true
@@ -321,16 +302,13 @@ export function DeployWizardClient() {
   const goNext = () => {
     if (step === 3) {
       ;(async () => {
-        // TODO: re-enable payment after testing
-        // try {
-        //   await startPayment()
-        //   setStep(4)
-        //   await handleDeploy()
-        // } catch {
-        //   alert("Payment did not complete. Please try again.")
-        // }
-        setStep(4)
-        await handleDeploy()
+        try {
+          await startPayment()
+          setStep(4)
+          await handleDeploy()
+        } catch {
+          setDeployError("Payment did not complete. Please try again.")
+        }
       })()
     } else {
       setStep((s) => s + 1)

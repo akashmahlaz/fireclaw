@@ -1,12 +1,17 @@
 import { auth } from "@/auth";
 import { markPaymentCaptured } from "@/lib/payments";
 import { verifyRazorpayPaymentSignature } from "@/lib/razorpay";
+import { rateLimitByUser } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Rate limit: 10 verifications per hour per user
+  const rl = rateLimitByUser(session.user.id, "payments:verify", 10, 60 * 60 * 1000);
+  if (rl) return rl;
 
   const body = await request.json();
   const orderId = body?.orderId as string;

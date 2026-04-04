@@ -9,7 +9,7 @@ export default async function AgentDetailPage({
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
-  if (!session?.user?.id) redirect("/api/auth/signin")
+  if (!session?.user?.id) redirect("/auth/signin")
 
   const { id } = await params
   const agent = await getAgentById(id, session.user.id)

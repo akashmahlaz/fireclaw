@@ -4,6 +4,7 @@ import {
   createRazorpayOrder,
   type BillingTier,
 } from "@/lib/razorpay";
+import { rateLimitByUser } from "@/lib/rate-limit";
 
 const ALLOWED_TIERS: BillingTier[] = ["starter", "standard", "pro", "enterprise"];
 
@@ -12,6 +13,10 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Rate limit: 10 payment orders per hour per user
+  const rl = rateLimitByUser(session.user.id, "payments:create", 10, 60 * 60 * 1000);
+  if (rl) return rl;
 
   const body = await request.json();
   const tier = body?.tier as BillingTier;

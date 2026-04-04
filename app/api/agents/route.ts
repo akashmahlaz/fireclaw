@@ -1,6 +1,9 @@
 import { auth } from "@/auth";
 import { createAgent, getAgentsByUser, updateAgent, pushProvisionLog } from "@/lib/agents";
 import { provisionAgent, waitForHealth } from "@/lib/provision";
+import { rateLimitByUser } from "@/lib/rate-limit";
+import { checkDeployQuota } from "@/lib/subscriptions";
+import { sendDeploySuccessEmail, sendDeployFailureEmail } from "@/lib/email";
 import { NextRequest } from "next/server";
 
 export async function GET() {
@@ -17,6 +20,19 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: 5 deploys per hour per user
+  const rl = rateLimitByUser(session.user.id, "agents:create", 5, 60 * 60 * 1000);
+  if (rl) return rl;
+
+  // Check plan limits
+  const quota = await checkDeployQuota(session.user.id);
+  if (!quota.allowed) {
+    return Response.json(
+      { error: quota.reason, used: quota.used, limit: quota.limit },
+      { status: 403 },
+    );
   }
 
   const body = await request.json();
@@ -71,6 +87,10 @@ export async function POST(request: NextRequest) {
         await pushProvisionLog(agentId, "Health check passed — OpenClaw Gateway responding", "ok");
         await pushProvisionLog(agentId, `🚀 Live at https://${domain}`, "ok");
         console.log(`[deploy] Agent ${agentId}: ✅ RUNNING at https://${domain}`);
+        // Send success email (non-blocking)
+        if (session.user.email) {
+          sendDeploySuccessEmail(session.user.email, name.trim(), domain).catch(() => {});
+        }
       } else {
         await updateAgent(agentId, userId, { status: "error" });
         await pushProvisionLog(agentId, "Health check timed out (10 min) — server may still be booting", "error");
@@ -82,6 +102,10 @@ export async function POST(request: NextRequest) {
       console.error(`[deploy] Agent ${agentId}: ❌ PROVISION FAILED:`, err);
       await pushProvisionLog(agentId, `Provisioning error: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
       await updateAgent(agentId, userId, { status: "error" });
+      // Send failure email (non-blocking)
+      if (session.user.email) {
+        sendDeployFailureEmail(session.user.email, name.trim(), err instanceof Error ? err.message : "Unknown error").catch(() => {});
+      }
     });
 
   return Response.json(agent, { status: 201 });
