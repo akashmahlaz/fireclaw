@@ -2,6 +2,7 @@
 
 import { BlurFade } from "@/components/ui/blur-fade"
 import { OrbitingCircles } from "@/components/ui/orbiting-circles"
+import { FireclawLogo } from "./FireclawLogo"
 
 export function ChannelOrbit() {
   return (
@@ -29,9 +30,7 @@ export function ChannelOrbit() {
           <div className="relative mx-auto flex h-[500px] w-full flex-col items-center justify-center overflow-hidden sm:h-[600px]">
               {/* Center logo */}
               <div className="z-10 flex size-20 items-center justify-center rounded-2xl border-2 border-neutral-200 bg-white shadow-lg">
-                <span className="text-[18px] font-black tracking-[-0.04em] text-neutral-900">
-                  FC
-                </span>
+                <FireclawLogo size={48} />
               </div>
 
               {/* Outer orbit — messaging channels */}
