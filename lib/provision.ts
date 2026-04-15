@@ -92,6 +92,39 @@ ${opts.domain} {
   // Escape the gateway token for JSON embedding
   const gatewayTokenJson = JSON.stringify(opts.gatewayToken);
 
+  // Build the OpenClaw JSON config with AI provider settings
+  const aiProviderConfig = opts.openaiApiKey
+    ? `,
+  "agents": {
+    "defaults": {
+      "model": "openai/gpt-4o",
+      "fallbackModels": ["openai/gpt-4o-mini"]
+    }
+  },
+  "models": {
+    "providers": {
+      "openai": {
+        "apiKey": "${opts.openaiApiKey}"
+      }
+    }
+  }`
+    : opts.anthropicApiKey
+    ? `,
+  "agents": {
+    "defaults": {
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "fallbackModels": ["anthropic/claude-haiku-4-20250414"]
+    }
+  },
+  "models": {
+    "providers": {
+      "anthropic": {
+        "apiKey": "${opts.anthropicApiKey}"
+      }
+    }
+  }`
+    : '';
+
   // Build a webhook helper function for the bash script
   const webhookFn = opts.webhookUrl && opts.webhookSecret
     ? `
@@ -163,7 +196,7 @@ cat > /root/.openclaw/openclaw.json << CONFIGEOF
       "allowedOrigins": ["https://${opts.domain}"],
       "dangerouslyDisableDeviceAuth": true
     }
-  }
+  }${aiProviderConfig}
 }
 CONFIGEOF
 chown 1000:1000 /root/.openclaw/openclaw.json
