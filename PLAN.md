@@ -203,3 +203,68 @@ Docker is similar cost but dramatically simpler to manage and scale.
 - **Churn** — target: <5%/month
 - **CAC** — cost to acquire (target: <₹500)
 - **LTV** — lifetime value (target: >₹15,000)
+
+---
+
+## Multi-Provider API Key + Live Model Selection
+
+### Overview
+Two places users configure AI providers with the same flow:
+1. **FireClaw Deployment Wizard** — during onboarding (Next.js app)
+2. **OpenClaw Dashboard** — topbar key icon popover (Lit UI)
+
+### Flow
+1. User opens provider panel → sees list of supported providers worldwide
+2. User selects a provider → enters their API key
+3. System **fetches live models** from the provider API using that key
+4. Models displayed with auto-select on the latest/best model
+5. User confirms → key + selected model saved to OpenClaw config
+6. Gateway restarts → agent uses the new model
+
+### Supported Providers (Worldwide)
+| Provider | Config Key | Models API | API Key Prefix |
+|----------|-----------|------------|----------------|
+| OpenAI | openai | GET /v1/models | sk- |
+| Anthropic | anthropic | GET /v1/models | sk-ant- |
+| Google Gemini | google | GET /v1beta/models | AI... |
+| Groq | groq | GET /openai/v1/models | gsk_ |
+| Mistral | mistral | GET /v1/models | — |
+| OpenRouter | openrouter | GET /api/v1/models | sk-or- |
+| DeepSeek | deepseek | GET /models | sk- |
+| Together AI | together | GET /v1/models | — |
+| Fireworks AI | fireworks | GET /inference/v1/models | — |
+| Perplexity | perplexity | GET /models | pplx- |
+| Cohere | cohere | GET /v2/models | — |
+| xAI (Grok) | xai | GET /v1/models | xai- |
+| MiniMax | minimax | GET /v1/models | — |
+| Cerebras | cerebras | GET /v1/models | csk- |
+| SambaNova | sambanova | GET /v1/models | — |
+| Qwen (DashScope) | qwen | GET /compatible-mode/v1/models | sk- |
+
+### Suggestion Banner
+Show a recommendation: "Try MiniMax — powerful models at affordable pricing" (shown when no key is configured).
+
+### Config Patch Format
+```json
+{
+  "models": {
+    "providers": {
+      "<provider>": {
+        "apiKey": "<key>",
+        "api": "openai-completions"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "<provider>/<model-id>"
+    }
+  }
+}
+```
+
+### Live Model Fetching
+- Client-side fetch to provider APIs (most support CORS or use OpenAI-compatible endpoints)
+- Fallback: proxy through OpenClaw gateway if CORS blocked
+- Parse response → display model list → auto-select latest
+- Show model metadata: name, context window, pricing tier
