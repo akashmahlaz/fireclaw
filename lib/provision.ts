@@ -17,11 +17,14 @@ function buildCloudInit(opts: {
   webhookSecret?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  ghcrToken?: string;
 }): string {
+  const openclawImage = process.env.OPENCLAW_DOCKER_IMAGE || "ghcr.io/akashmahlaz/openclaw:fireclaw-latest";
+
   const compose = `
 services:
   openclaw-gateway:
-    image: ghcr.io/openclaw/openclaw:latest
+    image: ${openclawImage}
     container_name: openclaw-gateway
     restart: unless-stopped
     ports:
@@ -241,6 +244,9 @@ report() {
 
 cd /opt/openclaw
 
+# ── Login to GHCR if token provided ────────────────────────────────
+${opts.ghcrToken ? `echo "${opts.ghcrToken}" | docker login ghcr.io -u akashmahlaz --password-stdin && report "🔑 GHCR login OK" "ok" || { report "❌ GHCR login failed" "error"; exit 1; }` : "# No GHCR token — assuming public image"}
+
 # ── Pull images with retry ──────────────────────────────────────────
 report "⬇️ Pulling Docker images (openclaw + caddy)…" "pending"
 pull_ok=false
@@ -395,6 +401,7 @@ export async function provisionAgent(opts: {
     webhookSecret: webhookUrl ? gatewayToken : undefined,
     openaiApiKey: opts.openaiApiKey,
     anthropicApiKey: opts.anthropicApiKey,
+    ghcrToken: process.env.GHCR_TOKEN || undefined,
   });
   console.log(`[provision] Agent ${opts.agentId}: cloud-init script generated (${userData.length} bytes)`);
 
