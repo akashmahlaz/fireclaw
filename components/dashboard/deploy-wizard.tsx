@@ -302,7 +302,8 @@ export function DeployWizardClient() {
     if (step === 3) {
       ;(async () => {
         try {
-          await startPayment()
+          // TODO: re-enable payment before going live
+          // await startPayment()
           setStep(4)
           await handleDeploy()
         } catch {

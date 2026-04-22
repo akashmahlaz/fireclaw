@@ -26,14 +26,14 @@ export async function POST(request: NextRequest) {
   const rl = rateLimitByUser(session.user.id, "agents:create", 5, 60 * 60 * 1000);
   if (rl) return rl;
 
-  // Check plan limits
-  const quota = await checkDeployQuota(session.user.id);
-  if (!quota.allowed) {
-    return Response.json(
-      { error: quota.reason, used: quota.used, limit: quota.limit },
-      { status: 403 },
-    );
-  }
+  // TODO: re-enable payment/quota check before going live
+  // const quota = await checkDeployQuota(session.user.id);
+  // if (!quota.allowed) {
+  //   return Response.json(
+  //     { error: quota.reason, used: quota.used, limit: quota.limit },
+  //     { status: 403 },
+  //   );
+  // }
 
   const body = await request.json();
   const { name, template, region, tier, apiKey, aiProvider } = body;
