@@ -24,8 +24,7 @@ export function Hero() {
             For <span className="text-violet-600">Business</span>
           </h1>
           <p className="mt-6 text-xl leading-relaxed text-neutral-600">
-            Deploy, monitor, and scale AI agents across your organization — all from one powerful platform.
-            No API keys required, no infrastructure to manage.
+            Deploy, Monitor, and Scale AI agents across your Business — all from one powerful platform.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
