@@ -18,7 +18,10 @@ export function Hero() {
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-64px)] max-w-7xl items-center px-6 lg:px-8">
         <div className="max-w-2xl">
           <h1 className="text-5xl font-bold tracking-tight text-neutral-900 sm:text-6xl lg:text-7xl">
-            AI Agents for business
+            AI  Agents 
+          </h1>
+          <h1 className="text-5xl font-bold tracking-tight text-neutral-900 sm:text-6xl lg:text-7xl">
+            For <span className="text-violet-600">Business</span>
           </h1>
           <p className="mt-6 text-xl leading-relaxed text-neutral-600">
             Deploy, monitor, and scale AI agents across your organization — all from one powerful platform.
