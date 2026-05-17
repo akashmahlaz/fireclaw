@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -267,3 +267,48 @@
 ::view-transition-old(root), ::view-transition-new(root) {
     animation: none;
     mix-blend-mode: normal;}
+
+.hero-industrial-grid {
+  background-image:
+    linear-gradient(to right, rgb(23 23 23 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(23 23 23 / 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.hero-soft-grid {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgb(15 23 42 / 0.07) 1px, transparent 0);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 78%);
+}
+
+.hero-agent-card {
+  animation: hero-agent-card 8s ease-in-out infinite;
+}
+
+.hero-float {
+  animation: hero-float 9s ease-in-out infinite;
+}
+
+.hero-float-delayed {
+  animation: hero-float 10s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+@keyframes hero-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes hero-agent-card {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}

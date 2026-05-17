@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { X, ArrowRight } from "lucide-react"
+import { ArrowRight, X } from "lucide-react"
 
 export function AnnouncementBar() {
   const [dismissed, setDismissed] = useState(false)
@@ -12,12 +12,9 @@ export function AnnouncementBar() {
   return (
     <div className="relative z-50 flex items-center justify-center gap-3 bg-orange-600 px-4 py-2.5 text-white">
       <p className="text-[13px] font-medium tracking-wide">
-        <span className="opacity-90">Early Access is live —</span>{" "}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
-        >
-          Deploy your OpenClaw in under 60 seconds
+        <span className="opacity-90">Early Access is live -</span>{" "}
+        <Link href="/auth/signin" className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline">
+          deploy a managed agent without adding an AI key
           <ArrowRight className="inline size-3.5" />
         </Link>
       </p>

@@ -1,11 +1,8 @@
 import Navbar from "@/components/layout/Navbar";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Hero } from "@/components/layout/Hero";
-import { TerminalShowcase } from "@/components/layout/TerminalShowcase";
-import { VideoShowcase } from "@/components/layout/VideoShowcase";
-import { ChannelOrbit } from "@/components/layout/ChannelOrbit";
+import { AgentTemplates } from "@/components/layout/AgentTemplates";
 import { Features } from "@/components/layout/Features";
-import { Stats } from "@/components/layout/Stats";
 import { HowItWorks } from "@/components/layout/HowItWorks";
 import { Pricing } from "@/components/layout/Pricing";
 import { FAQ } from "@/components/layout/FAQ";
@@ -18,12 +15,9 @@ export default function Home() {
       <AnnouncementBar />
       <Navbar />
       <Hero />
-      <TerminalShowcase />
-      <VideoShowcase />
-      <ChannelOrbit />
-      <Features />
-      <Stats />
       <HowItWorks />
+      <AgentTemplates />
+      <Features />
       <Pricing />
       <FAQ />
       <CTA />

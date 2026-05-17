@@ -3,73 +3,63 @@
 import { BlurFade } from "@/components/ui/blur-fade"
 import {
   Accordion,
+  AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
 } from "@/components/ui/accordion"
 
 const faqs = [
   {
-    q: "What is OpenClaw?",
-    a: "OpenClaw is an open-source AI assistant engine that connects to messaging channels like WhatsApp, Telegram, Discord, and more. FireClaw deploys it on a dedicated VPS for you — fully configured with SSL, DNS, and health monitoring.",
+    q: "What is FireClaw?",
+    a: "FireClaw is a managed platform for deploying business AI agents. You choose an agent template or request a custom build, and FireClaw handles hosting, SSL, deployment logs, and default AI model configuration.",
   },
   {
-    q: "Is my server shared with other users?",
-    a: "No. Every FireClaw deployment runs on a dedicated VPS. Your data, compute, and network are completely isolated. You get root-level access to your own machine.",
+    q: "Do users need to add an AI API key?",
+    a: "No for the default flow. FireClaw attaches managed MiniMax access so every deployed agent starts working immediately. Claude, OpenAI, and BYO keys are upgrade paths for advanced users.",
   },
   {
     q: "How long does deployment take?",
-    a: "Under 60 seconds on average. We provision the VPS, configure DNS, issue SSL, and run health checks — your OpenClaw instance is live almost instantly.",
+    a: "The product goal is a deploy flow that feels like minutes, not cloud setup. The dashboard shows live provisioning logs while FireClaw chooses the runtime, configures SSL, and checks health.",
   },
   {
-    q: "What regions are available?",
-    a: "We currently support 6 data center locations: Falkenstein (Germany), Nuremberg (Germany), Helsinki (Finland), Ashburn (Virginia, US), Hillsboro (Oregon, US), and Singapore. More regions coming soon.",
+    q: "Why do you not show regions in the deploy flow?",
+    a: "Most customers do not want to choose data centers. FireClaw picks the most cost-effective healthy location internally and keeps advanced infrastructure choices out of the normal flow.",
   },
   {
-    q: "What are the exact server costs?",
-    a: "Starter €4.49/mo, Standard €6.99/mo, Pro €12.49/mo, Enterprise €22.99/mo. All prices excl. VAT. No hidden fees — what you see is what you pay.",
+    q: "Can FireClaw build custom agents?",
+    a: "Yes. Custom builds are for workflows that need private data, tools, integrations, channels, or a higher quality model than the default MiniMax setup.",
   },
   {
-    q: "Can I cancel anytime?",
-    a: "Yes. All plans are monthly with no long-term commitment. Cancel anytime from your dashboard — your server will remain active until the end of the billing period.",
+    q: "Can FireClaw deploy WordPress, Express, or Next.js apps?",
+    a: "Express and Next.js are straightforward future Docker templates. WordPress is supportable too, but it should be treated as a separate managed app product because it needs database, backups, plugin policy, and update handling.",
   },
   {
-    q: "Do I get SSH access to my server?",
-    a: "Yes. All plans include full root SSH access. You can install additional software, modify configurations, or access logs directly on your VPS.",
-  },
-  {
-    q: "What happens if my server goes down?",
-    a: "Our monitoring system checks your instance regularly. If an issue is detected, we automatically restart the service. All VPS infrastructure is backed by enterprise-grade data centers with 99.9% uptime.",
+    q: "How does FireClaw keep OpenClaw updated?",
+    a: "OpenClaw stays upstream-trackable. FireClaw-specific work lives in a small patch layer, deployment image, and app orchestration so upstream updates can be rebased and smoke-tested regularly.",
   },
 ]
 
 export function FAQ() {
   return (
-    <section id="faq" className="relative bg-neutral-50 py-24 sm:py-32">
+    <section id="faq" className="bg-neutral-50 py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-6">
-        {/* Header */}
         <BlurFade inView delay={0}>
-          <div className="mb-14 text-center">
-            <p className="mb-4 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">
-              FAQ
-            </p>
-            <h2 className="text-[36px] font-black leading-[1.1] tracking-[-0.03em] text-neutral-900 sm:text-[44px] lg:text-[52px]">
-              Questions?
-              <br />
-              <span className="text-neutral-400">We&apos;ve got answers.</span>
+          <div className="mb-12 text-center">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">FAQ</p>
+            <h2 className="text-[34px] font-black leading-[1.1] tracking-[-0.03em] text-neutral-950 sm:text-[46px]">
+              Practical answers for the new direction.
             </h2>
           </div>
         </BlurFade>
 
-        {/* Accordion */}
         <BlurFade inView delay={0.1}>
           <Accordion className="w-full">
-            {faqs.map((faq, i) => (
-              <AccordionItem key={i} className="border-b border-neutral-200">
-                <AccordionTrigger className="py-5 text-[15px] font-semibold text-neutral-900 hover:no-underline">
+            {faqs.map((faq, index) => (
+              <AccordionItem key={index} className="border-b border-neutral-200">
+                <AccordionTrigger className="py-5 text-left text-[15px] font-semibold text-neutral-950 hover:no-underline">
                   {faq.q}
                 </AccordionTrigger>
-                <AccordionContent className="text-[14px] leading-relaxed text-neutral-500">
+                <AccordionContent className="text-[14px] leading-relaxed text-neutral-600">
                   <p>{faq.a}</p>
                 </AccordionContent>
               </AccordionItem>

@@ -1,5 +1,6 @@
 import { ObjectId, type WithId, type Document } from "mongodb";
 import client from "./db";
+import type { AgentTemplateId, PlanId } from "./agent-catalog";
 
 const DB_NAME = "fireclaw";
 
@@ -7,7 +8,7 @@ export interface Agent {
   _id?: ObjectId;
   userId: string;
   name: string;
-  template: "sales" | "support" | "assistant" | "custom";
+  template: AgentTemplateId | "sales" | "support" | "assistant" | "custom";
   status: "provisioning" | "running" | "stopped" | "error";
   serverId?: string; // Hetzner server ID
   serverIp?: string;
@@ -16,6 +17,10 @@ export interface Agent {
   gatewayToken?: string; // OpenClaw gateway auth token
   region: string;
   tier: "starter" | "standard" | "pro" | "enterprise";
+  planId?: PlanId;
+  aiProvider?: "minimax" | "openai" | "anthropic";
+  includedAiCredits?: string;
+  deploymentType?: "managed-agent" | "custom-agent";
   messageCount: number;
   /** Step-by-step provisioning log for real-time UI */
   provisionLog?: { step: string; status: "ok" | "pending" | "error"; ts: number }[];

@@ -1,84 +1,151 @@
+import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
-import { BlurFade } from "@/components/ui/blur-fade"
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpen,
+  Clock3,
+  Headphones,
+  Search,
+  Send,
+  ShieldCheck,
+  Zap,
+} from "lucide-react"
+
+
+
+const trustItems = [
+  { icon: Zap, title: "No code setup", text: "Deploy in minutes" },
+  { icon: Clock3, title: "Instant deployment", text: "Get started right away" },
+  { icon: ShieldCheck, title: "Enterprise ready", text: "Secure and scalable" },
+]
+
+const statusIcons = [Search, BookOpen, Headphones, Send, BarChart3]
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-[92vh] w-full flex-col items-center justify-center overflow-hidden bg-white px-6 pt-20 pb-24">
-      {/* Faint radial glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[40%] h-125 w-175 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, #fed7aa 0%, #fef3c7 40%, transparent 70%)",
-          filter: "blur(80px)",
-        }}
+    <section className="relative min-h-[calc(100svh-88px)] overflow-hidden border-b border-violet-100 bg-white">
+      <Image
+        src="/hero1.png"
+        alt="Operator working calmly while AI agents complete business tasks"
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover object-[62%_center]"
       />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.985)_0%,rgba(255,255,255,0.94)_30%,rgba(255,255,255,0.48)_57%,rgba(255,255,255,0.04)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_38%_38%,rgba(124,58,237,0.13),transparent_34%)]" />
 
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 text-center">
-        {/* Badge */}
-        <BlurFade inView delay={0}>
-          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-1.5 shadow-sm">
-            <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
-            <span className="text-[12px] font-semibold tracking-wide text-neutral-600">
-              Early Access — Limited spots available
-            </span>
-          </div>
-        </BlurFade>
+      <div className="relative z-10 mx-auto min-h-[calc(100svh-88px)] max-w-[1600px] px-8 lg:px-12">
+        <div className="flex min-h-[calc(100svh-88px)] items-center pt-2">
+          <div className="w-full max-w-[720px] pb-20">
+            <div className="mb-14 inline-flex items-center gap-3 rounded-lg border border-violet-200 bg-white/80 px-4 py-2.5 text-[16px] font-medium text-slate-700 shadow-sm shadow-violet-950/5 backdrop-blur">
+              <span className="size-2.5 rounded-full bg-violet-600" />
+              Managed agent infrastructure for serious teams
+            </div>
 
-        {/* Headline */}
-        <BlurFade inView delay={0.08}>
-          <h1 className="max-w-[18ch] text-[52px] font-black leading-[1.04] tracking-[-0.04em] text-neutral-900 sm:text-[68px] md:text-[80px] lg:text-[92px]">
-            One click.{" "}
-            <span className="text-orange-500">openclaw deploy.</span>
-          </h1>
-        </BlurFade>
-
-        {/* Subtitle */}
-        <BlurFade inView delay={0.14}>
-          <p className="max-w-[52ch] text-balance text-[16px] leading-[1.75] text-neutral-500 sm:text-[18px]">
-            Deploy a private OpenClaw server in 60 seconds. Own the
-            infrastructure. Scale without asking permission.
-          </p>
-        </BlurFade>
-
-        {/* CTA */}
-        <BlurFade inView delay={0.2}>
-          <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <Link
-              href="/dashboard"
-              className="group inline-flex items-center gap-3 rounded-full bg-neutral-900 px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-neutral-900/20 transition-all duration-300 hover:bg-neutral-700 hover:shadow-neutral-900/30 active:scale-[0.97]"
-            >
-              Deploy Now
-              <span className="flex size-5 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:translate-x-0.5">
-                <ArrowRight className="size-3" />
+            <h1 className="max-w-[12.5ch] text-[66px] font-black leading-[1.03] tracking-[-0.052em] text-black sm:text-[86px] lg:text-[92px]">
+              Deploy AI{" "}
+              <span className="block bg-gradient-to-r from-violet-600 to-violet-500 bg-clip-text text-transparent">
+                Agents for Business
               </span>
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="text-[14px] font-medium text-neutral-400 transition-colors hover:text-neutral-700"
-            >
-              See how it works →
-            </Link>
-          </div>
-        </BlurFade>
+            </h1>
 
-        {/* Social proof strip */}
-        <BlurFade inView delay={0.26}>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] font-medium text-neutral-400">
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-green-500" />
-              Dedicated VPS — not shared
-            </span>
-            <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
-            <span>From €4.49/mo</span>
-            <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
-            <span>&lt;60s deploy time</span>
-            <span className="hidden h-3 w-px bg-neutral-200 sm:block" />
-            <span>6 locations</span>
+            <p className="mt-9 max-w-[640px] text-[24px] leading-[1.47] text-slate-600">
+              Deploy, monitor, and scale AI agents across your organization - all from one powerful platform.
+            </p>
+
+            <div className="mt-11 flex flex-col gap-5 sm:flex-row">
+              <Link
+                href="/auth/signin"
+                className="inline-flex items-center justify-center gap-4 rounded-lg bg-violet-600 px-7 py-4 text-[18px] font-bold text-white shadow-xl shadow-violet-600/20 transition hover:bg-violet-700"
+              >
+                Start Deploying
+                <ArrowRight className="size-5" />
+              </Link>
+              <Link
+                href="#agent-templates"
+                className="inline-flex items-center justify-center gap-2 rounded-3xl border  bg-white/80 px-4 py-2 text-sm font-bold text-violet-700 shadow-sm backdrop-blur transition hover:bg-white"
+              >
+                Explore Agents
+                <span className="flex size-6 items-center justify-center rounded-full border border-violet-500">
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </Link>
+            </div>
           </div>
-        </BlurFade>
+        </div>
+
+        <div className="absolute bottom-12 left-8 z-20 hidden grid-cols-3 gap-13 lg:grid lg:px-4">
+          {trustItems.map((item) => (
+            <div key={item.title} className="grid grid-cols-[50px_1fr] items-center gap-4">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <item.icon className="size-5" />
+              </span>
+              <span>
+                <span className="block text-[14px] font-black text-neutral-950">{item.title}</span>
+                <span className="mt-1 block text-[14px] font-medium text-slate-500">{item.text}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <svg className="pointer-events-none absolute inset-0 hidden h-full w-full text-violet-300/70 lg:block" aria-hidden="true">
+          <path d="M920 196 C 1020 130, 1240 150, 1348 250 S 1460 472, 1336 560" fill="none" stroke="currentColor" strokeDasharray="7 11" strokeWidth="2" />
+          <path d="M760 466 C 896 362, 1046 450, 1108 536 S 1306 638, 1438 540" fill="none" stroke="currentColor" strokeDasharray="7 11" strokeWidth="2" />
+          <path d="M1030 318 L 1030 450" fill="none" stroke="currentColor" strokeDasharray="7 11" strokeWidth="2" />
+        </svg>
+
+        {/* <div className="hidden lg:block">
+          {agentCards.map((agent, index) => (
+            <div
+              key={agent.name}
+              className={`hero-agent-card absolute z-20 rounded-xl border border-violet-100 bg-white/94 p-5 shadow-2xl shadow-violet-950/10 backdrop-blur-xl ${agent.className}`}
+              style={{ animationDelay: `${index * 0.5}s` }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <span className="flex size-13 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                    <agent.icon className="size-7" />
+                  </span>
+                  <div>
+                    <h3 className="text-[15px] font-black text-black">{agent.name}</h3>
+                    <p className="mt-2 text-[13px] leading-snug text-slate-700">{agent.result}</p>
+                  </div>
+                </div>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-[13px] font-black text-white">
+                  {agent.avatar}
+                </span>
+              </div>
+
+              <div className="mt-5 flex items-end justify-between gap-5">
+                <div className="h-9 flex-1 overflow-hidden">
+                  <svg viewBox="0 0 144 40" className="h-full w-full text-violet-600" aria-hidden="true">
+                    <path d="M2 29 C 16 16, 26 30, 42 18 S 66 10, 82 20 S 112 29, 142 8" fill="none" stroke="currentColor" strokeWidth="3.2" />
+                  </svg>
+                </div>
+                <span className="text-[18px] font-black text-violet-600">{agent.metric}</span>
+              </div>
+
+              <span className="mt-4 inline-flex rounded-lg bg-violet-100 px-4 py-1.5 text-[13px] font-bold text-violet-600">
+                Running
+              </span>
+            </div>
+          ))}
+        </div> */}
+
+        <div className="absolute bottom-8 left-[53%] z-30 hidden items-center gap-5 rounded-xl border border-violet-100 bg-white/88 px-6 py-4 shadow-2xl shadow-violet-950/10 backdrop-blur-xl lg:flex">
+          <span className="size-2.5 rounded-full bg-violet-600" />
+          <span className="text-[15px] font-bold text-neutral-900">All agents running smoothly</span>
+          <div className="flex items-center gap-3">
+            {statusIcons.map((Icon, index) => (
+              <span key={index} className="flex size-9 items-center justify-center rounded-full bg-violet-50 text-violet-600">
+                <Icon className="size-4" />
+              </span>
+            ))}
+            <span className="flex size-9 items-center justify-center rounded-full bg-slate-100 text-[13px] font-black text-slate-600">+12</span>
+          </div>
+        </div>
       </div>
     </section>
   )

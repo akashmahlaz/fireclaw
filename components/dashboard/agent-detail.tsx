@@ -51,12 +51,6 @@ const statusLabel = {
   error: "Error",
 }
 
-const regionLabel: Record<string, string> = {
-  "eu-central": "🇩🇪 Frankfurt",
-  "us-east": "🇺🇸 Virginia",
-  "ap-south": "🇮🇳 Mumbai",
-}
-
 export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
@@ -196,7 +190,7 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
 
           {/* Info grid */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <InfoCard icon={Globe} label="Region" value={regionLabel[agent.region] ?? agent.region} />
+            <InfoCard icon={Globe} label="Runtime" value="Managed automatically" />
             <InfoCard icon={Cpu} label="Template" value={agent.template} />
             <InfoCard icon={MessageSquare} label="Messages" value={agent.messageCount.toLocaleString()} />
             <InfoCard

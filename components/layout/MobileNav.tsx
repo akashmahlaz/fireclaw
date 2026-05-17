@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Menu, X, ArrowRight } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
-import { FireclawLogo } from "./FireclawLogo"
 
 const navLinks = [
   { label: "Platform", href: "#features" },
@@ -41,12 +41,10 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
               <Link
                 href="/"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5"
+                className="flex items-center"
+                aria-label="FireClaw home"
               >
-                <FireclawLogo size={28} />
-                <span className="text-sm font-black uppercase tracking-[0.12em] text-neutral-900">
-                  FIRECLAW
-                </span>
+                <Image src="/fireclaw-wordmark.svg" alt="FireClaw" width={166} height={22} className="h-6 w-auto" />
               </Link>
               <button
                 onClick={() => setOpen(false)}

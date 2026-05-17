@@ -17,6 +17,7 @@ function buildCloudInit(opts: {
   webhookSecret?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  minimaxApiKey?: string;
   ghcrToken?: string;
 }): string {
   const openclawImage = process.env.OPENCLAW_DOCKER_IMAGE || "ghcr.io/akashmahlaz/openclaw:fireclaw-latest";
@@ -45,6 +46,8 @@ services:
       - XDG_CONFIG_HOME=/home/node/.openclaw
       - OPENAI_API_KEY=\${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=\${ANTHROPIC_API_KEY:-}
+      - MINIMAX_API_KEY=\${MINIMAX_API_KEY:-}
+      - MINIMAX_CODE_PLAN_KEY=\${MINIMAX_CODE_PLAN_KEY:-}
     command:
       [
         "node",
@@ -90,6 +93,8 @@ ${opts.domain} {
     `OPENCLAW_GATEWAY_TOKEN=${opts.gatewayToken}`,
     `OPENAI_API_KEY=${opts.openaiApiKey ?? ""}`,
     `ANTHROPIC_API_KEY=${opts.anthropicApiKey ?? ""}`,
+    `MINIMAX_API_KEY=${opts.minimaxApiKey ?? ""}`,
+    `MINIMAX_CODE_PLAN_KEY=${opts.minimaxApiKey ?? ""}`,
   ].join("\n");
 
   // Escape the gateway token for JSON embedding
@@ -123,6 +128,22 @@ ${opts.domain} {
     "providers": {
       "anthropic": {
         "apiKey": "${opts.anthropicApiKey}"
+      }
+    }
+  }`
+    : opts.minimaxApiKey
+    ? `,
+  "agents": {
+    "defaults": {
+      "model": "minimax/MiniMax-M2.7",
+      "fallbackModels": ["minimax/MiniMax-M2.7-highspeed"]
+    }
+  },
+  "models": {
+    "providers": {
+      "minimax": {
+        "apiKey": "${opts.minimaxApiKey}",
+        "baseUrl": "https://api.minimax.io/anthropic"
       }
     }
   }`
@@ -401,6 +422,7 @@ export async function provisionAgent(opts: {
     webhookSecret: webhookUrl ? gatewayToken : undefined,
     openaiApiKey: opts.openaiApiKey,
     anthropicApiKey: opts.anthropicApiKey,
+    minimaxApiKey: process.env.MINIMAX_API_KEY || process.env.MINIMAX_CODE_PLAN_KEY || undefined,
     ghcrToken: process.env.GHCR_TOKEN || undefined,
   });
   console.log(`[provision] Agent ${opts.agentId}: cloud-init script generated (${userData.length} bytes)`);

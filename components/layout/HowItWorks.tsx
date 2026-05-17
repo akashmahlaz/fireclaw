@@ -1,84 +1,85 @@
 "use client"
 
+import { Bot, CheckCircle2, CreditCard, Rocket, ShieldCheck } from "lucide-react"
 import { BlurFade } from "@/components/ui/blur-fade"
-import { MagicCard } from "@/components/ui/magic-card"
-import { UserPlus, CreditCard, Rocket } from "lucide-react"
 
 const steps = [
   {
-    step: "01",
-    icon: UserPlus,
-    title: "Create your account",
-    description:
-      "Sign up with Google or email. No credit card required to explore the dashboard.",
+    icon: Bot,
+    title: "Select the business job",
+    description: "Start from a support, research, document, content, commerce, or analyst template with a clear operating scope.",
   },
   {
-    step: "02",
     icon: CreditCard,
-    title: "Pick a plan",
-    description:
-      "Choose from 4 VPS tiers — Starter to Enterprise. Pay monthly, cancel anytime.",
+    title: "Set capacity and controls",
+    description: "Pick the plan, usage limits, model route, channels, and escalation rules without exposing cloud complexity.",
   },
   {
-    step: "03",
     icon: Rocket,
-    title: "Deploy in 60 seconds",
-    description:
-      "Select a region, hit deploy. Your private OpenClaw instance is live with SSL, DNS, and health checks.",
+    title: "Launch into managed operations",
+    description: "FireClaw provisions the runtime, attaches managed AI access, configures SSL, and monitors health after deploy.",
   },
+]
+
+const operatingSignals = [
+  "Runtime selected",
+  "Managed model attached",
+  "SSL issued",
+  "Health check passed",
+  "Usage guardrails active",
 ]
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="relative bg-neutral-50 py-24 sm:py-32">
-      <div className="mx-auto max-w-5xl px-6">
+    <section id="how-it-works" className="border-b border-neutral-200 bg-neutral-50 py-20 sm:py-28">
+      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[0.85fr_1.15fr]">
         <BlurFade inView delay={0}>
-          <div className="mb-14 text-center">
-            <p className="mb-4 text-[11px] font-bold uppercase tracking-[3px] text-neutral-400">
-              How it works
-            </p>
-            <h2 className="text-[36px] font-black leading-[1.1] tracking-[-0.03em] text-neutral-900 sm:text-[44px] lg:text-[52px]">
-              Three steps.
-              <br />
-              <span className="text-neutral-400">That&apos;s it.</span>
+          <div>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[3px] text-neutral-500">Operating model</p>
+            <h2 className="max-w-xl text-[34px] font-black leading-[1.1] text-neutral-950 sm:text-[46px]">
+              The user sees workflow choices. FireClaw handles the platform work.
             </h2>
+            <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-neutral-600">
+              Big-company landing pages do not explain every feature at once. They show a system buyers can trust: what gets configured, what gets controlled, and what happens after launch.
+            </p>
           </div>
         </BlurFade>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {steps.map((s, i) => (
-            <BlurFade key={s.step} inView delay={0.08 * i}>
-              <MagicCard
-                className="flex h-full flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm"
-                gradientSize={200}
-                gradientColor="#fdba7420"
-              >
-                {/* Step number */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[42px] font-black leading-none tracking-[-0.06em] text-orange-500/20">
-                    {s.step}
-                  </span>
-                  <s.icon className="size-6 text-neutral-700" strokeWidth={1.5} />
+        <div className="grid gap-5">
+          {steps.map((step, index) => (
+            <BlurFade key={step.title} inView delay={0.08 * index}>
+              <div className="grid gap-5 border border-neutral-200 bg-white p-5 shadow-sm md:grid-cols-[auto_1fr_auto] md:items-center">
+                <div className="flex size-11 items-center justify-center bg-neutral-950 text-white">
+                  <step.icon className="size-5" />
                 </div>
-
-                <h3 className="text-[20px] font-bold text-neutral-900">
-                  {s.title}
-                </h3>
-                <p className="text-[14px] leading-relaxed text-neutral-500">
-                  {s.description}
-                </p>
-              </MagicCard>
+                <div>
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Step 0{index + 1}</p>
+                  <h3 className="mt-1 text-[19px] font-bold text-neutral-950">{step.title}</h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-neutral-600">{step.description}</p>
+                </div>
+                <div className="hidden min-w-32 border-l border-neutral-200 pl-5 text-[12px] font-semibold text-emerald-700 md:block">
+                  Operationalized
+                </div>
+              </div>
             </BlurFade>
           ))}
-        </div>
 
-        {/* Connector line — desktop only */}
-        <div className="mx-auto mt-10 hidden max-w-md items-center justify-center gap-2 md:flex">
-          <div className="h-0.5 flex-1 rounded-full bg-neutral-200" />
-          <span className="text-[11px] font-bold uppercase tracking-widest text-neutral-400">
-            You&apos;re live
-          </span>
-          <div className="h-0.5 flex-1 rounded-full bg-neutral-200" />
+          <BlurFade inView delay={0.28}>
+            <div className="border border-neutral-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2 text-[13px] font-bold text-neutral-950">
+                <ShieldCheck className="size-4 text-emerald-600" />
+                Launch checklist
+              </div>
+              <div className="grid gap-3 sm:grid-cols-5">
+                {operatingSignals.map((signal) => (
+                  <div key={signal} className="flex items-center gap-2 text-[12px] font-medium text-neutral-600">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                    {signal}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </BlurFade>
         </div>
       </div>
     </section>

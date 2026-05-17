@@ -39,12 +39,6 @@ const statusLabel = {
   error: "Error",
 }
 
-const regionLabel: Record<string, string> = {
-  "eu-central": "🇩🇪 Frankfurt",
-  "us-east": "🇺🇸 Virginia",
-  "ap-south": "🇮🇳 Mumbai",
-}
-
 export function AgentsClient({ agents }: { agents: AgentRow[] }) {
   const [search, setSearch] = useState("")
   const [view, setView] = useState<"grid" | "list">("grid")
@@ -164,7 +158,7 @@ export function AgentsClient({ agents }: { agents: AgentRow[] }) {
 
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-md bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-neutral-500">
-                    {regionLabel[agent.region] ?? agent.region}
+                    Managed runtime
                   </span>
                   <span className="rounded-md bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-neutral-500">
                     {agent.template}
@@ -190,7 +184,7 @@ export function AgentsClient({ agents }: { agents: AgentRow[] }) {
                 <tr className="border-b border-neutral-100 text-left">
                   <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-neutral-400">Name</th>
                   <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-neutral-400">Status</th>
-                  <th className="hidden px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-neutral-400 md:table-cell">Region</th>
+                  <th className="hidden px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-neutral-400 md:table-cell">Runtime</th>
                   <th className="hidden px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-neutral-400 md:table-cell">Messages</th>
                   <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-neutral-400">Created</th>
                 </tr>
@@ -210,7 +204,7 @@ export function AgentsClient({ agents }: { agents: AgentRow[] }) {
                       </span>
                     </td>
                     <td className="hidden px-5 py-3.5 text-[12px] text-neutral-500 md:table-cell">
-                      {regionLabel[agent.region] ?? agent.region}
+                      Managed
                     </td>
                     <td className="hidden px-5 py-3.5 text-[12px] text-neutral-500 md:table-cell">
                       {agent.messageCount.toLocaleString()}

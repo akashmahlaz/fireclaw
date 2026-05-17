@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb"
 import client from "./db"
+import { getPlan } from "./agent-catalog"
 
 const DB_NAME = "fireclaw"
 
@@ -8,7 +9,7 @@ export type SubscriptionStatus = "active" | "halted" | "cancelled" | "expired"
 export interface Subscription {
   _id?: ObjectId
   userId: string
-  tier: "starter" | "standard" | "pro" | "enterprise"
+  tier: "starter" | "standard" | "pro" | "enterprise" | "growth" | "agency" | "custom"
   status: SubscriptionStatus
   agentLimit: number
   /** Razorpay subscription ID (if using Razorpay Subscriptions) */
@@ -22,10 +23,13 @@ export interface Subscription {
 }
 
 const TIER_LIMITS: Record<string, number> = {
-  starter: 1,
-  standard: 3,
-  pro: 10,
-  enterprise: 100,
+  starter: getPlan("starter").agentLimit,
+  growth: getPlan("growth").agentLimit,
+  agency: getPlan("agency").agentLimit,
+  custom: getPlan("custom").agentLimit,
+  standard: getPlan("growth").agentLimit,
+  pro: getPlan("agency").agentLimit,
+  enterprise: getPlan("custom").agentLimit,
 }
 
 function subscriptions() {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { ChevronDown } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
@@ -11,53 +11,53 @@ type DropdownDef = { sections: DropdownSection[] }
 
 const navItems: Array<{ label: string; href?: string; dropdown?: DropdownDef }> = [
   {
-    label: "PLATFORM",
+    label: "Platform",
     dropdown: {
       sections: [
         {
           title: "Deploy",
           items: [
-            { name: "1-Click Deploy", desc: "Launch OpenClaw on a dedicated VPS in seconds", href: "/dashboard" },
-            { name: "VPS Tiers", desc: "Starter, Standard, Pro, Enterprise", href: "#pricing" },
-            { name: "Regions", desc: "6 locations across US, EU, and Asia", href: "#features" },
+            { name: "Agent Templates", desc: "Ready-made agents for business workflows", href: "#agent-templates" },
+            { name: "Managed AI", desc: "MiniMax included by default, no user API key required", href: "#how-it-works" },
+            { name: "Simple Plans", desc: "Pricing by deployed agents and usage limits", href: "#pricing" },
           ],
         },
         {
           title: "Manage",
           items: [
-            { name: "Dashboard", desc: "Monitor, reboot, resize your instances", href: "/dashboard" },
-            { name: "Custom Domains", desc: "Bring your own domain with auto SSL", href: "/dashboard" },
-            { name: "SSH Access", desc: "Full root access to your VPS", href: "/dashboard" },
+            { name: "Dashboard", desc: "Monitor deployed agents and provisioning logs", href: "/dashboard" },
+            { name: "Custom Agents", desc: "Founder-led builds for your exact workflow", href: "#custom-agents" },
+            { name: "Roadmap", desc: "Channels, workflow templates, and marketplace direction", href: "#features" },
           ],
         },
       ],
     },
   },
   {
-    label: "SOLUTIONS",
+    label: "Solutions",
     dropdown: {
       sections: [
         {
           title: "Use Cases",
           items: [
-            { name: "Agencies", desc: "Deploy AI agents for multiple clients from one dashboard", href: "#features" },
-            { name: "SaaS Builders", desc: "White-label OpenClaw as your own AI product", href: "#features" },
-            { name: "Support Teams", desc: "24/7 AI support on WhatsApp, Telegram & more", href: "#features" },
+            { name: "Agencies", desc: "Deploy agents for multiple clients from one dashboard", href: "#features" },
+            { name: "Small Teams", desc: "Automate support, research, content, and document work", href: "#features" },
+            { name: "Support Teams", desc: "Start with a customer support agent template", href: "#agent-templates" },
           ],
         },
         {
-          title: "Infrastructure",
+          title: "Future App Deploys",
           items: [
-            { name: "Cloud Infrastructure", desc: "6 global locations, from €4.49/mo", href: "#pricing" },
-            { name: "More Regions", desc: "US, EU, APAC — more coming soon", href: "#pricing" },
-            { name: "OpenClaw Engine", desc: "Open-source AI assistant powering every deploy", href: "#faq" },
+            { name: "Express", desc: "Straightforward backend Docker template", href: "#faq" },
+            { name: "Next.js", desc: "Docker-first app deploy template path", href: "#faq" },
+            { name: "WordPress", desc: "Supportable as a separate managed app product", href: "#faq" },
           ],
         },
       ],
     },
   },
-  { label: "PRICING", href: "#pricing" },
-  { label: "DOCS", href: "/docs" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Docs", href: "/docs" },
 ]
 
 export function NavDesktop() {
@@ -74,28 +74,17 @@ export function NavDesktop() {
   }
 
   return (
-    <div className="hidden items-center gap-0.5 md:flex">
+    <div className="hidden items-center gap-9 md:flex">
       {navItems.map((item) =>
         item.dropdown ? (
-          <div
-            key={item.label}
-            className="relative"
-            onMouseEnter={() => handleEnter(item.label)}
-            onMouseLeave={handleLeave}
-          >
+          <div key={item.label} className="relative" onMouseEnter={() => handleEnter(item.label)} onMouseLeave={handleLeave}>
             <button
-              className={`flex items-center gap-1 rounded-md px-3.5 py-2 text-[11px] font-bold tracking-widest transition-colors ${
-                activeDropdown === item.label
-                  ? "text-neutral-900"
-                  : "text-neutral-400 hover:text-neutral-700"
+              className={`flex items-center gap-2 rounded-md px-1 py-2 text-[16px] font-bold transition-colors ${
+                activeDropdown === item.label ? "text-neutral-950" : "text-neutral-800 hover:text-violet-700"
               }`}
             >
               {item.label}
-              <ChevronDown
-                className={`size-3 transition-transform duration-200 ${
-                  activeDropdown === item.label ? "rotate-180" : ""
-                }`}
-              />
+              <ChevronDown className={`size-4 transition-transform duration-200 ${activeDropdown === item.label ? "rotate-180" : ""}`} />
             </button>
 
             <AnimatePresence>
@@ -105,37 +94,25 @@ export function NavDesktop() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 6 }}
                   transition={{ duration: 0.13 }}
-                  className="absolute left-1/2 top-full mt-1 min-w-85 -translate-x-1/2 rounded-2xl border border-neutral-100 bg-white p-5 shadow-xl shadow-neutral-200/60"
+                  className="absolute left-1/2 top-full mt-2 min-w-[22.5rem] -translate-x-1/2 rounded-lg border border-neutral-200 bg-white p-5 shadow-2xl shadow-neutral-900/10"
                   onMouseEnter={() => handleEnter(item.label)}
                   onMouseLeave={handleLeave}
                 >
-                  {/* Arrow pointer */}
-                  <div className="absolute -top-1.5 left-1/2 size-3 -translate-x-1/2 rotate-45 border-l border-t border-neutral-100 bg-white" />
-
-                  <div
-                    className={`grid gap-6 ${
-                      item.dropdown.sections.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                    }`}
-                  >
+                  <div className="absolute -top-1.5 left-1/2 size-3 -translate-x-1/2 rotate-45 border-l border-t border-neutral-200 bg-white" />
+                  <div className={`grid gap-6 ${item.dropdown.sections.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
                     {item.dropdown.sections.map((section) => (
                       <div key={section.title}>
-                        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
-                          {section.title}
-                        </p>
+                        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">{section.title}</p>
                         <div className="space-y-0.5">
                           {section.items.map((di) => (
                             <Link
                               key={di.name}
                               href={di.href}
                               onClick={() => setActiveDropdown(null)}
-                              className="group flex flex-col rounded-xl px-3 py-2.5 transition-colors hover:bg-neutral-50"
+                              className="group flex flex-col rounded-md px-3 py-2.5 transition-colors hover:bg-neutral-50"
                             >
-                              <span className="text-[13px] font-semibold text-neutral-800 group-hover:text-neutral-900">
-                                {di.name}
-                              </span>
-                              <span className="mt-0.5 text-[12px] leading-snug text-neutral-400">
-                                {di.desc}
-                              </span>
+                              <span className="text-[13px] font-semibold text-neutral-800 group-hover:text-neutral-900">{di.name}</span>
+                              <span className="mt-0.5 text-[12px] leading-snug text-neutral-400">{di.desc}</span>
                             </Link>
                           ))}
                         </div>
@@ -150,11 +127,11 @@ export function NavDesktop() {
           <Link
             key={item.label}
             href={item.href ?? "#"}
-            className="rounded-md px-3.5 py-2 text-[11px] font-bold tracking-widest text-neutral-400 transition-colors hover:text-neutral-700"
+            className="rounded-md px-1 py-2 text-[16px] font-bold text-neutral-800 transition-colors hover:text-violet-700"
           >
             {item.label}
           </Link>
-        )
+        ),
       )}
     </div>
   )

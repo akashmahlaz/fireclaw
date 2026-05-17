@@ -1,32 +1,32 @@
 import Link from "next/link"
+import { Flame } from "lucide-react"
 import { auth } from "@/auth"
 import { NavDesktop } from "./NavDesktop"
 import { NavActions } from "./NavActions"
 import { MobileNav } from "./MobileNav"
-import { FireclawLogo } from "./FireclawLogo"
 
 export default async function Navbar() {
   const session = await auth()
   const isLoggedIn = !!session
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-neutral-100 bg-white backdrop-blur-xl md:bg-white/95">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-        {/* Logo + Wordmark */}
+    <header className="sticky top-0 z-40 w-full border-b border-violet-100/80 bg-white/92 backdrop-blur-xl">
+      <nav className="mx-auto flex h-[88px] max-w-[1600px] items-center justify-between px-8 lg:px-12">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2.5"
+          className="flex shrink-0 items-center gap-3.5"
+          aria-label="FireClaw home"
         >
-          <FireclawLogo size={28} />
-          <span className="text-sm font-black tracking-[0.12em] text-neutral-900 uppercase">
-            FIRECLAW
+          <span className="flex size-11 items-center justify-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-600/20">
+            <Flame className="size-7" fill="currentColor" strokeWidth={1.5} />
+          </span>
+          <span className="text-[31px] font-black leading-none tracking-[-0.04em] text-neutral-950">
+            FireClaw
           </span>
         </Link>
 
-        {/* Desktop mega-menu */}
         <NavDesktop />
 
-        {/* Right: sign-in + CTA + mobile hamburger */}
         <div className="flex items-center gap-3">
           <NavActions isLoggedIn={isLoggedIn} />
           <MobileNav isLoggedIn={isLoggedIn} />
