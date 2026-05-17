@@ -22,7 +22,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
       <button
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className="flex size-9 items-center justify-center rounded-lg text-neutral-600 transition-colors hover:bg-neutral-100"
+        className="flex size-9 items-center justify-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100"
       >
         <Menu className="size-5" />
       </button>
@@ -37,26 +37,21 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
             className="fixed inset-0 z-50 flex flex-col bg-white"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-              <Link
-                href="/"
-                onClick={() => setOpen(false)}
-                className="flex items-center"
-                aria-label="FireClaw home"
-              >
-                <Image src="/fireclaw-wordmark.svg" alt="FireClaw" width={166} height={22} className="h-6 w-auto" />
+            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+              <Link href="/" onClick={() => setOpen(false)} aria-label="FireClaw home">
+                <Image src="/fireclaw-wordmark.svg" alt="FireClaw" width={140} height={24} className="h-6 w-auto" />
               </Link>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
-                className="flex size-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors active:bg-neutral-200"
+                className="flex size-9 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100"
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </button>
             </div>
 
             {/* Links */}
-            <nav className="flex flex-1 flex-col gap-1 px-4 pt-4">
+            <nav className="flex flex-1 flex-col gap-1 px-3 pt-3">
               {navLinks.map((link, i) => (
                 <motion.div
                   key={link.href + link.label}
@@ -67,7 +62,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                   <Link
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className="block rounded-2xl px-4 py-3.5 text-[16px] font-semibold text-neutral-700 transition-colors active:bg-neutral-50"
+                    className="block rounded-md px-3 py-2.5 text-base font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
                   >
                     {link.label}
                   </Link>
@@ -75,14 +70,14 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
               ))}
             </nav>
 
-            {/* Actions — pinned to bottom */}
-            <div className="border-t border-neutral-100 px-6 pb-8 pt-4">
-              <div className="flex flex-col gap-3">
+            {/* Actions */}
+            <div className="border-t border-neutral-200 px-4 pb-6 pt-4">
+              <div className="flex flex-col gap-2">
                 {isLoggedIn ? (
                   <Link
                     href="/dashboard"
                     onClick={() => setOpen(false)}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 px-5 py-3.5 text-[15px] font-semibold text-white transition-colors active:bg-neutral-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
                   >
                     Dashboard
                     <ArrowRight className="size-4" />
@@ -92,7 +87,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                     <Link
                       href="/auth/signin"
                       onClick={() => setOpen(false)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 px-5 py-3.5 text-[15px] font-semibold text-white transition-colors active:bg-neutral-700"
+                      className="flex w-full items-center justify-center gap-2 rounded-md bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-700"
                     >
                       Get started
                       <ArrowRight className="size-4" />
@@ -100,7 +95,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                     <Link
                       href="/auth/signin"
                       onClick={() => setOpen(false)}
-                      className="w-full rounded-full border border-neutral-200 px-5 py-3.5 text-center text-[15px] font-semibold text-neutral-700 transition-colors active:bg-neutral-50"
+                      className="w-full rounded-md border border-neutral-300 px-4 py-2.5 text-center text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
                     >
                       Log in
                     </Link>

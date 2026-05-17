@@ -10,11 +10,11 @@ export function AnnouncementBar() {
   if (dismissed) return null
 
   return (
-    <div className="relative z-50 flex items-center justify-center gap-3 bg-orange-600 px-4 py-2.5 text-white">
-      <p className="text-[13px] font-medium tracking-wide">
-        <span className="opacity-90">Early Access is live -</span>{" "}
+    <div className="relative z-50 flex items-center justify-center gap-2 bg-violet-600 px-4 py-2 text-sm text-white">
+      <p>
+        <span className="font-medium">Early Access is live</span> —{" "}
         <Link href="/auth/signin" className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline">
-          deploy a managed agent without adding an AI key
+          Deploy a managed agent without adding an AI key
           <ArrowRight className="inline size-3.5" />
         </Link>
       </p>
