@@ -10,10 +10,11 @@ export function Hero() {
         alt="Operator working calmly while AI agents complete business tasks"
         fill
         priority
+        quality={100}
         sizes="100vw"
         className="object-cover object-[62%_center]"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-transparent" />
+      <div className="absolute inset-0" />
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-64px)] max-w-7xl items-center px-6 lg:px-8">
         <div className="max-w-2xl">
