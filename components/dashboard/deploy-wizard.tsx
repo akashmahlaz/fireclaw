@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Loader2, Rocket, Sparkles, XCircle } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Rocket, Sparkles, XCircle, ExternalLink, Bot } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AGENT_TEMPLATES, FIRECLAW_PLANS, getPlan, isTemplateAvailableOnPlan } from "@/lib/agent-catalog"
 import { BlurFade } from "@/components/ui/blur-fade"
@@ -15,6 +15,22 @@ interface ProvisionLogEntry {
   step: string
   status: "ok" | "pending" | "error"
   ts: number
+}
+
+// Map technical provision messages → friendly business language
+function friendlyStep(raw: string): string {
+  const msg = raw.toLowerCase()
+  if (msg.includes("server") && msg.includes("creat")) return "Reserving a dedicated server for your agent"
+  if (msg.includes("server") && msg.includes("start")) return "Server is starting up"
+  if (msg.includes("dns")) return "Setting up your custom web address"
+  if (msg.includes("ssl") || msg.includes("cert") || msg.includes("https") || msg.includes("caddy")) return "Securing your agent with HTTPS"
+  if (msg.includes("docker") || msg.includes("pull") || msg.includes("image") || msg.includes("container")) return "Installing the agent software"
+  if (msg.includes("health") || msg.includes("wait") || msg.includes("gateway")) return "Checking your agent is running correctly"
+  if (msg.includes("live at") || msg.includes("running") || msg.includes("ready")) return "Your agent is live"
+  if (msg.includes("cloud-init") || msg.includes("boot") || msg.includes("init")) return "Configuring the server environment"
+  if (msg.includes("ip") || msg.includes("allocat")) return "Assigning a unique address to your agent"
+  if (msg.includes("email")) return "Sending you a confirmation email"
+  return raw
 }
 
 const deployableTemplates = AGENT_TEMPLATES.filter((template) => template.status === "deployable")
@@ -63,7 +79,7 @@ export function DeployWizardClient() {
       queryClient.invalidateQueries({ queryKey: ["agents"] })
       setTimeout(() => confettiRef.current?.fire({}), 500)
     } else if (polledAgent.status === "error") {
-      setDeployError("Provisioning failed. Check logs below.")
+      setDeployError("Something went wrong during setup. You can retry from your dashboard.")
       setDeploying(false)
     }
   }, [polledAgent, deployed, deployError, queryClient])
@@ -97,7 +113,7 @@ export function DeployWizardClient() {
 
       setAgentId(data._id)
     } catch (error) {
-      setDeployError(error instanceof Error ? error.message : "Failed to start deployment. Please try again.")
+      setDeployError(error instanceof Error ? error.message : "Failed to start. Please try again.")
       setDeploying(false)
     }
   }, [name, planId, templateId])
@@ -259,65 +275,107 @@ export function DeployWizardClient() {
           )}
 
           {step === 3 && (
-            <div className="mx-auto max-w-2xl space-y-6">
-              <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-5 font-mono text-[13px] leading-relaxed">
-                <p className="text-green-400">
-                  {`> fireclaw deploy "${name}" --template ${templateId} --plan ${planId}`}
-                </p>
+            <div className="mx-auto max-w-xl space-y-6">
+              {/* Progress card */}
+              {!deployed && !deployError && (
+                <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                  <div className="border-b border-neutral-100 bg-neutral-50 px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 items-center justify-center rounded-full bg-violet-100">
+                        <Bot className="size-4 text-violet-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-900">{name}</p>
+                        <p className="text-xs text-neutral-500">{selectedTemplate?.name} · {selectedPlan.name} plan</p>
+                      </div>
+                      <div className="ml-auto flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                        <Loader2 className="size-3 animate-spin" />
+                        Setting up
+                      </div>
+                    </div>
+                  </div>
 
-                {provisionLog.length === 0 && deploying && (
-                  <p className="mt-3 flex items-center gap-2 text-neutral-500">
-                    <Loader2 className="size-3.5 animate-spin" />
-                    Preparing managed deployment...
-                  </p>
-                )}
-
-                {provisionLog.map((entry, index) => (
-                  <p
-                    key={`${entry.ts}-${index}`}
-                    className={cn(
-                      "mt-1",
-                      entry.status === "ok" && "text-emerald-400",
-                      entry.status === "pending" && "text-amber-400",
-                      entry.status === "error" && "text-red-400",
+                  <div className="divide-y divide-neutral-100">
+                    {provisionLog.length === 0 ? (
+                      <div className="flex items-center gap-3 px-5 py-4">
+                        <Loader2 className="size-4 shrink-0 animate-spin text-neutral-400" />
+                        <span className="text-sm text-neutral-500">Getting things ready…</span>
+                      </div>
+                    ) : (
+                      provisionLog.map((entry: ProvisionLogEntry, index: number) => (
+                        <div key={`${entry.ts}-${index}`} className="flex items-center gap-3 px-5 py-3.5">
+                          {entry.status === "ok" && <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />}
+                          {entry.status === "pending" && <Loader2 className="size-4 shrink-0 animate-spin text-amber-500" />}
+                          {entry.status === "error" && <XCircle className="size-4 shrink-0 text-red-500" />}
+                          <span className={cn(
+                            "text-sm",
+                            entry.status === "ok" && "text-neutral-700",
+                            entry.status === "pending" && "text-neutral-900 font-medium",
+                            entry.status === "error" && "text-red-700",
+                          )}>
+                            {friendlyStep(entry.step)}
+                          </span>
+                        </div>
+                      ))
                     )}
-                  >
-                    {entry.status === "ok" && <CheckCircle2 className="mr-1.5 inline size-3" />}
-                    {entry.status === "pending" && <Circle className="mr-1.5 inline size-3" />}
-                    {entry.status === "error" && <XCircle className="mr-1.5 inline size-3" />}
-                    {entry.step}
-                  </p>
-                ))}
+                  </div>
 
-                {deploying && provisionLog.length > 0 && (
-                  <p className="mt-2 flex items-center gap-2 text-neutral-500">
-                    <Loader2 className="size-3.5 animate-spin" />
-                    Provisioning in progress...
-                  </p>
-                )}
-              </div>
+                  <div className="border-t border-neutral-100 bg-neutral-50 px-5 py-3">
+                    <p className="text-xs text-neutral-400">This usually takes 60–90 seconds. You can leave this page — we'll email you when it's ready.</p>
+                  </div>
+                </div>
+              )}
 
+              {/* Error state */}
               {deployError && (
-                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-5">
+                <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5">
                   <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
                   <div>
-                    <p className="text-[14px] font-bold text-red-900">{deployError}</p>
+                    <p className="text-sm font-semibold text-red-900">Setup didn't complete</p>
+                    <p className="mt-1 text-sm text-red-700">{deployError}</p>
                     <button
-                      onClick={() => router.push("/dashboard/agents")}
-                      className="mt-2 text-[13px] font-medium text-red-700 underline hover:no-underline"
+                      onClick={() => agentId && router.push(`/dashboard/agents/${agentId}`)}
+                      className="mt-3 text-sm font-medium text-red-700 underline underline-offset-2 hover:no-underline"
                     >
-                      View agent details
+                      View details
                     </button>
                   </div>
                 </div>
               )}
 
+              {/* Success state */}
               {deployed && (
-                <div className="flex flex-col items-center gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-                  <CheckCircle2 className="size-8 text-emerald-500" />
-                  <p className="text-[15px] font-bold text-neutral-900">Agent deployed successfully.</p>
+                <div className="flex flex-col items-center gap-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+                  <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100">
+                    <CheckCircle2 className="size-7 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-neutral-900">{name} is live</p>
+                    <p className="mt-1 text-sm text-neutral-500">Your agent is running and ready to work.</p>
+                  </div>
                   {agentDomain && (
                     <a
+                      href={`https://${agentDomain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-sm ring-1 ring-neutral-200 hover:bg-neutral-50"
+                    >
+                      Open agent
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => agentId && router.push(`/dashboard/agents/${agentId}`)}
+                    className="rounded-lg bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
+                  >
+                    Go to dashboard
+                  </button>
+                </div>
+              )}
+
+              <Confetti ref={confettiRef} className="pointer-events-none absolute left-0 top-0 z-50 size-full" />
+            </div>
+          )}a
                       href={`https://${agentDomain}`}
                       target="_blank"
                       rel="noopener noreferrer"
