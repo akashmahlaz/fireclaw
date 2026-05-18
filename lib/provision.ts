@@ -347,11 +347,15 @@ export function generateGatewayToken(): string {
  * Load a per-agent system prompt from config/agents/<templateId>.md.
  * Returns undefined if the file does not exist (no system prompt injection).
  */
-function loadSystemPrompt(templateId: string | undefined): string | undefined {
+function loadSystemPrompt(templateId: string | undefined, agentName?: string): string | undefined {
   if (!templateId) return undefined;
   try {
     const configPath = join(process.cwd(), "config", "agents", `${templateId}.md`);
-    return readFileSync(configPath, "utf-8").trim();
+    let prompt = readFileSync(configPath, "utf-8").trim();
+    if (agentName) {
+      prompt = prompt.replaceAll("{{BUSINESS_NAME}}", agentName);
+    }
+    return prompt;
   } catch {
     return undefined;
   }
@@ -421,7 +425,7 @@ export async function provisionAgent(opts: {
     anthropicApiKey: opts.anthropicApiKey,
     minimaxApiKey: process.env.MINIMAX_API_KEY || process.env.MINIMAX_CODE_PLAN_KEY || undefined,
     ghcrToken: process.env.GHCR_TOKEN || undefined,
-    systemPrompt: loadSystemPrompt(opts.templateId),
+    systemPrompt: loadSystemPrompt(opts.templateId, opts.name),
   });
   console.log(`[provision] Agent ${opts.agentId}: cloud-init script generated (${userData.length} bytes)`);
 
