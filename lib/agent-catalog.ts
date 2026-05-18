@@ -7,22 +7,30 @@ export type AgentTemplateId =
   | "shopping-assistant"
   | "business-analyst"
   | "seo-agent"
+  | "sales-outreach"
+  | "hr-screener"
+  | "finance-analyst"
+  | "code-reviewer"
+  | "legal-assistant"
   | "custom-agent";
 
 export type PlanId = "starter" | "growth" | "agency" | "custom";
 export type InfrastructureTier = "starter" | "standard" | "pro" | "enterprise";
+export type AgentTemplateStatus = "deployable" | "coming-soon" | "custom-setup";
 
 export interface AgentTemplate {
   id: AgentTemplateId;
   name: string;
+  icon: string;
   category: string;
   description: string;
+  capabilities: string[];
   runtime: "openclaw" | "managed-custom";
   minimumPlan: PlanId;
   defaultModelProvider: "minimax";
   requiredSecrets: string[];
   healthCheck: string;
-  status: "deployable" | "custom-setup";
+  status: AgentTemplateStatus;
 }
 
 export interface FireclawPlan {
@@ -110,22 +118,16 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "customer-support",
     name: "Customer Support",
+    icon: "🎧",
     category: "Support",
-    description: "Answers FAQs, triages tickets, and escalates unresolved customer issues.",
+    description: "Answers FAQs, triages tickets, and escalates unresolved customer issues 24/7.",
+    capabilities: [
+      "Handles common questions instantly without human intervention",
+      "Triages and prioritises tickets by urgency and topic",
+      "Escalates edge cases with full context to your team",
+    ],
     runtime: "openclaw",
     minimumPlan: "starter",
-    defaultModelProvider: "minimax",
-    requiredSecrets: [],
-    healthCheck: "/healthz",
-    status: "deployable",
-  },
-  {
-    id: "research-analyst",
-    name: "Research Analyst",
-    category: "Research",
-    description: "Finds sources, compares claims, and turns research into structured briefs.",
-    runtime: "openclaw",
-    minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
@@ -134,8 +136,14 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "content-studio",
     name: "Content Studio",
+    icon: "✍️",
     category: "Content",
-    description: "Drafts blogs, social posts, newsletters, and campaign copy from a brief.",
+    description: "Drafts blogs, social posts, newsletters, and campaign copy from a short brief.",
+    capabilities: [
+      "Writes SEO-ready long-form blog posts and articles",
+      "Generates LinkedIn, Twitter, and Instagram copy",
+      "Adapts tone, voice, and format to your brand",
+    ],
     runtime: "openclaw",
     minimumPlan: "starter",
     defaultModelProvider: "minimax",
@@ -144,10 +152,52 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     status: "deployable",
   },
   {
-    id: "document-intake",
-    name: "Document Intake",
-    category: "Operations",
-    description: "Reads uploaded documents and extracts useful structured business data.",
+    id: "shopping-assistant",
+    name: "Shopping Assistant",
+    icon: "🛍️",
+    category: "Commerce",
+    description: "Compares products, explains tradeoffs, and guides buyers to confident decisions.",
+    capabilities: [
+      "Compares specs and prices across products in real time",
+      "Explains pros, cons, and use-case fit clearly",
+      "Handles objections and nudges buyers toward purchase",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "starter",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "deployable",
+  },
+  {
+    id: "seo-agent",
+    name: "SEO Agent",
+    icon: "🔍",
+    category: "Marketing",
+    description: "Audits your pages, surfaces ranking gaps, and delivers fixes that move you up search results.",
+    capabilities: [
+      "On-page audits: title, meta, headings, internal links",
+      "Keyword gap analysis against top-ranking competitors",
+      "Actionable content briefs for target queries",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "growth",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "deployable",
+  },
+  {
+    id: "research-analyst",
+    name: "Research Analyst",
+    icon: "🔬",
+    category: "Research",
+    description: "Finds credible sources, compares claims, and turns raw research into structured briefs your team can act on.",
+    capabilities: [
+      "Searches the web and synthesises findings into clear summaries",
+      "Fact-checks claims against multiple authoritative sources",
+      "Outputs structured reports, tables, and key takeaways",
+    ],
     runtime: "openclaw",
     minimumPlan: "growth",
     defaultModelProvider: "minimax",
@@ -158,8 +208,14 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "market-trends",
     name: "Market Trends",
+    icon: "📈",
     category: "Marketing",
-    description: "Tracks topics, summarizes changes, and produces trend reports.",
+    description: "Monitors industry topics, summarises key shifts, and produces weekly trend reports you can forward to clients.",
+    capabilities: [
+      "Tracks news, social signals, and competitor moves",
+      "Surfaces emerging trends before they become mainstream",
+      "Produces formatted weekly digest reports",
+    ],
     runtime: "openclaw",
     minimumPlan: "growth",
     defaultModelProvider: "minimax",
@@ -168,12 +224,18 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     status: "deployable",
   },
   {
-    id: "shopping-assistant",
-    name: "Shopping Assistant",
-    category: "Commerce",
-    description: "Compares products, explains tradeoffs, and helps buyers choose.",
+    id: "document-intake",
+    name: "Document Intake",
+    icon: "📄",
+    category: "Operations",
+    description: "Reads uploaded PDFs and docs, extracts key data, and routes summaries to the right place automatically.",
+    capabilities: [
+      "Parses contracts, invoices, reports, and forms",
+      "Extracts structured data: dates, amounts, parties, clauses",
+      "Summarises and routes outputs to Slack, email, or CRM",
+    ],
     runtime: "openclaw",
-    minimumPlan: "starter",
+    minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
@@ -182,8 +244,14 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "business-analyst",
     name: "Business Analyst",
+    icon: "📊",
     category: "Analytics",
-    description: "Turns business questions and spreadsheets into decisions and reports.",
+    description: "Connects to your data, runs analysis on demand, and delivers decision-ready reports and dashboards.",
+    capabilities: [
+      "Answers business questions from spreadsheets and databases",
+      "Identifies trends, anomalies, and growth levers",
+      "Generates charts, tables, and executive summaries",
+    ],
     runtime: "openclaw",
     minimumPlan: "agency",
     defaultModelProvider: "minimax",
@@ -191,23 +259,108 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     healthCheck: "/healthz",
     status: "deployable",
   },
+  // ── Coming Soon ──────────────────────────────────────────────────────────────
   {
-    id: "seo-agent",
-    name: "SEO Agent",
-    category: "Marketing",
-    description: "Analyzes your pages and content, finds ranking opportunities, and delivers actionable improvements so more customers find you in search.",
+    id: "sales-outreach",
+    name: "Sales Outreach",
+    icon: "💼",
+    category: "Sales",
+    description: "Researches prospects, writes personalised outreach sequences, and books meetings on your calendar automatically.",
+    capabilities: [
+      "Researches leads from LinkedIn, websites, and news",
+      "Writes personalised cold email + follow-up sequences",
+      "Books discovery calls directly into your calendar",
+    ],
     runtime: "openclaw",
     minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
+  },
+  {
+    id: "hr-screener",
+    name: "HR Screener",
+    icon: "👥",
+    category: "Operations",
+    description: "Screens job applications, scores candidates against your criteria, and schedules interviews automatically.",
+    capabilities: [
+      "Parses CVs and scores candidates against your job spec",
+      "Sends personalised screening questions to shortlisted applicants",
+      "Schedules interviews and sends calendar invites",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "growth",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "coming-soon",
+  },
+  {
+    id: "finance-analyst",
+    name: "Finance Analyst",
+    icon: "💰",
+    category: "Analytics",
+    description: "Reads your P&L, cash flow, and invoices — then surfaces the insights that actually move the needle.",
+    capabilities: [
+      "Parses bank statements, invoices, and expense reports",
+      "Spots spending anomalies and cash flow risks early",
+      "Generates monthly financial summaries and forecasts",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "agency",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "coming-soon",
+  },
+  {
+    id: "code-reviewer",
+    name: "Code Reviewer",
+    icon: "💻",
+    category: "Engineering",
+    description: "Reviews pull requests, catches bugs, suggests improvements, and explains changes in plain English.",
+    capabilities: [
+      "Reviews PRs for bugs, security issues, and anti-patterns",
+      "Suggests refactors with examples in your codebase style",
+      "Writes commit summaries and changelogs automatically",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "growth",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "coming-soon",
+  },
+  {
+    id: "legal-assistant",
+    name: "Legal Assistant",
+    icon: "⚖️",
+    category: "Operations",
+    description: "Reviews contracts, flags risky clauses, and answers legal questions in plain language — not legal fees.",
+    capabilities: [
+      "Flags non-standard and high-risk contract clauses",
+      "Answers legal questions with jurisdiction-aware context",
+      "Drafts NDAs, terms, and standard agreement templates",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "agency",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "coming-soon",
   },
   {
     id: "custom-agent",
     name: "Custom Agent",
+    icon: "⚙️",
     category: "Custom",
-    description: "A founder-led build for your workflow, data, channel, and integrations.",
+    description: "A founder-led build for your specific workflow, data sources, channels, and integrations.",
+    capabilities: [
+      "Built around your exact use case and data",
+      "Integrates with your existing tools and channels",
+      "Dedicated implementation and onboarding support",
+    ],
     runtime: "managed-custom",
     minimumPlan: "custom",
     defaultModelProvider: "minimax",

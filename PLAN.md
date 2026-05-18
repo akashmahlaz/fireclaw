@@ -268,3 +268,171 @@ Show a recommendation: "Try MiniMax — powerful models at affordable pricing" (
 - Fallback: proxy through OpenClaw gateway if CORS blocked
 - Parse response → display model list → auto-select latest
 - Show model metadata: name, context window, pricing tier
+
+---
+
+## Infrastructure Roadmap
+
+### Phase A: Shared VPS Multi-Tenancy (Cost Optimisation)
+
+**Problem:** Current architecture creates one Hetzner VPS per agent (€3.79/agent on CX21).
+Starter plan at $7/agent barely covers infra cost. Margins are too thin.
+
+**Solution:** Shared VPS — pack 3 agents onto one CX32.
+
+#### Architecture
+
+```
+CX32 host (4 vCPU, 8GB, €9.29/mo)  ← "cluster server"
+├── nginx (port 443) — routes by subdomain
+├── agent-abc123  (openclaw container, port 18789, 2GB RAM limit)
+├── agent-def456  (openclaw container, port 18790, 2GB RAM limit)
+└── agent-ghi789  (openclaw container, port 18791, 2GB RAM limit)
+```
+
+Each agent gets subdomain: `{agent-id}.agents.fireclaw.app` → nginx → `localhost:1878N`
+
+#### Cost comparison
+
+| Model | Server | Cost/agent |
+|-------|--------|-----------|
+| Current (dedicated) | CX21 per agent | €3.79 |
+| Shared Starter | 3 agents / CX32 | €3.10 |
+| Shared Growth | 5 agents / CX42 | €2.90 |
+
+#### DB changes needed
+
+New `hosts` collection:
+```ts
+{
+  _id: ObjectId,
+  serverId: number,        // Hetzner server ID
+  serverIp: string,
+  tier: "shared" | "dedicated",
+  maxSlots: number,        // 3 for CX32, 5 for CX42
+  usedSlots: number,
+  region: string,
+  status: "active" | "draining" | "decommissioned"
+}
+```
+
+`provision.ts` logic:
+1. If plan === "starter" → find host with `usedSlots < maxSlots` in same region
+2. If none found → create new CX32, add to `hosts`, set `maxSlots: 3`
+3. Run docker container on host at next available port (18789 + usedSlots)
+4. Increment `usedSlots`
+5. If plan === "growth"+ → create dedicated CX21 as before
+
+#### Plan tiers
+
+| Plan | Infrastructure |
+|------|---------------|
+| Starter ($7/agent) | Shared CX32, 2GB RAM cap, 3 agents/server |
+| Growth ($21 for 3) | Dedicated CX21 per agent |
+| Agency ($70 for 10) | Dedicated CX32 per agent |
+
+---
+
+### Phase B: Fireclaw Platform on Hetzner (No Cold Starts)
+
+**Problem:** Vercel cold starts (~500ms) hurt interactive dashboard. Vercel Pro + functions can spike to $100+/mo at scale. `maxDuration=800` is expensive on Vercel.
+
+**Solution:** Self-host Fireclaw platform on Hetzner using Coolify.
+
+#### Architecture
+
+```
+Hetzner CX42 (8 vCPU / 16GB / €29/mo)   ← "platform server"
+├── Coolify (open-source PaaS, free)
+│   ├── fireclaw-web  (Next.js, PM2, always-on)
+│   ├── mongodb       (replica, backups to R2)
+│   └── caddy         (SSL termination, routing)
+└── GitHub webhook → Coolify → zero-downtime deploy
+```
+
+#### Benefits vs Vercel
+
+| | Vercel | Hetzner + Coolify |
+|---|---|---|
+| Monthly cost | $20+ (spikes) | €29 fixed |
+| Cold starts | 200–800ms | None (PM2 always-on) |
+| Long-running functions | $$ (maxDuration) | Free (it's just Node) |
+| Deploy | Push to main | Push to main (same) |
+| SSL | Automatic | Automatic (Caddy) |
+| Logs | Vercel dashboard | Coolify dashboard |
+
+#### Migration steps
+1. Provision CX42 in Frankfurt (same region as agent VPSes)
+2. Install Coolify: `curl -fsSL https://get.coolify.io | bash`
+3. Add GitHub repo → Coolify auto-detects Next.js
+4. Set all `.env.local` vars in Coolify environment panel
+5. Add DNS A record: `fireclaw.ai → CX42 IP`
+6. Test → cut over → remove Vercel project
+
+#### Storage
+- MongoDB on the same CX42 (with daily dumps to Cloudflare R2)
+- Agent media/files → Cloudflare R2 (free egress, S3-compatible)
+
+---
+
+### Phase C: OpenClaw Upstream PR — Multi-Provider API Key
+
+**Status:** Draft PR openclaw/openclaw#83570 — CLOSED pending fixes.
+
+**Fixes needed before re-opening:**
+
+1. `api` type mapping — most providers (Groq, Mistral, Together, etc.) use the `/v1/chat/completions` endpoint which maps to `openai-completions`, NOT `openai-responses`. Only actual OpenAI should use `openai-responses`. Anthropic stays `anthropic-messages`.
+
+2. Verify Google Gemini — needs `google-vertex` or `openai-completions` depending on endpoint used.
+
+3. End-to-end test on a live OpenClaw instance before re-opening.
+
+**Correct `api` mapping:**
+```
+openai       → openai-responses      (Responses API)
+anthropic    → anthropic-messages
+google       → openai-completions    (Gemini OpenAI-compat endpoint)
+groq         → openai-completions
+mistral      → openai-completions
+openrouter   → openai-completions
+deepseek     → openai-completions
+together     → openai-completions
+fireworks    → openai-completions
+perplexity   → openai-completions
+xai          → openai-completions
+minimax      → openai-completions
+qwen         → openai-completions
+cohere       → openai-completions
+voyage       → openai-completions    (embeddings only)
+replicate    → openai-completions
+```
+
+---
+
+### Phase D: MCP Server + CLI
+
+#### MCP Server (`app/api/mcp/route.ts`)
+Lets Claude Desktop, Cursor, and any MCP client manage Fireclaw agents programmatically.
+
+Tools to expose:
+- `deploy_agent(template, plan, name)` → starts provisioning, returns agent ID
+- `list_agents()` → all agents for authenticated user
+- `get_agent_status(id)` → status, logs, domain
+- `update_agent_prompt(id, prompt)` → live system prompt push
+- `delete_agent(id)` → destroys VPS and removes DB record
+
+Auth: Bearer token from user profile API keys table.
+
+#### CLI (`packages/cli/`)
+npm package `fireclaw-cli` for paid users.
+
+```bash
+npx fireclaw login           # OAuth → stores API key in ~/.fireclaw
+npx fireclaw deploy          # interactive: pick template → name → plan → deploy
+npx fireclaw list            # table of all agents + status
+npx fireclaw logs <id>       # stream provision + runtime logs
+npx fireclaw ssh <id>        # proxy SSH to agent VPS (Growth+ plan)
+npx fireclaw delete <id>     # destroy agent
+```
+
+DB addition needed: `api_keys` collection per user (hashed, last-used timestamp).
