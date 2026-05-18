@@ -250,6 +250,7 @@ export function DeployWizardClient() {
                     onSelect={() => {
                       if (template.status !== "deployable") return
                       setTemplateId(template.id)
+                      setStep(1)
                     }}
                   />
                 ))}
@@ -273,7 +274,11 @@ export function DeployWizardClient() {
                     <button
                       key={plan.id}
                       type="button"
-                      onClick={() => allowed && setPlanId(plan.id)}
+                      onClick={() => {
+                        if (!allowed) return
+                        setPlanId(plan.id)
+                        setStep(2)
+                      }}
                       disabled={!allowed}
                       className={cn(
                         "relative flex flex-col overflow-hidden rounded-2xl border p-5 text-left transition-all disabled:cursor-not-allowed",
@@ -504,30 +509,22 @@ export function DeployWizardClient() {
             </BlurFade>
           )}
 
-          {step < 3 && (
+          {step > 0 && step < 3 && (
             <div className="mt-10 flex items-center justify-between border-t border-neutral-100 pt-6">
               <Button
                 variant="ghost"
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
-                disabled={step === 0}
                 className="gap-2"
               >
                 <ArrowLeft className="size-3.5" />
                 Back
               </Button>
-              <Button onClick={goNext} disabled={!canNext()} className="gap-2 rounded-full px-6">
-                {step === 2 ? (
-                  <>
-                    Deploy Agent
-                    <Rocket className="size-3.5" />
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="size-3.5" />
-                  </>
-                )}
-              </Button>
+              {step === 2 && (
+                <Button onClick={goNext} disabled={!canNext()} className="gap-2 rounded-full px-6">
+                  Deploy Agent
+                  <Rocket className="size-3.5" />
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -613,12 +610,10 @@ function AgentCard({
               <span
                 className={cn(
                   "rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors",
-                  selected
-                    ? "bg-neutral-900 text-white"
-                    : "bg-neutral-100 text-neutral-700 group-hover:bg-neutral-200",
+                  "bg-neutral-900 text-white opacity-0 group-hover:opacity-100",
                 )}
               >
-                {selected ? "Selected" : "Select"}
+                Choose →
               </span>
             </>
           ) : (

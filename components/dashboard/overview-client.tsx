@@ -1,11 +1,21 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
-import { Server, AlertTriangle, Activity, Rocket } from "lucide-react"
+import { Activity, AlertTriangle, Bot, Rocket, TrendingUp, CheckCircle2, Clock } from "lucide-react"
 import { NumberTicker } from "@/components/ui/number-ticker"
 import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar"
 import { BlurFade } from "@/components/ui/blur-fade"
-import { BorderBeam } from "@/components/ui/border-beam"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
 interface AgentSummary {
@@ -30,6 +40,13 @@ const statusColor = {
   error: "bg-red-500",
 }
 
+const statusBadge = {
+  running: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  provisioning: "bg-amber-50 text-amber-700 border-amber-200",
+  stopped: "bg-neutral-100 text-neutral-500 border-neutral-200",
+  error: "bg-red-50 text-red-600 border-red-200",
+}
+
 const statusLabel = {
   running: "Running",
   provisioning: "Provisioning",
@@ -38,9 +55,9 @@ const statusLabel = {
 }
 
 const regionLabel: Record<string, string> = {
-  "eu-central": "🇩🇪 Frankfurt",
-  "us-east": "🇺🇸 Virginia",
-  "ap-south": "🇮🇳 Mumbai",
+  "eu-central": "Frankfurt",
+  "us-east": "Virginia",
+  "ap-south": "Mumbai",
 }
 
 export function OverviewClient({
@@ -49,156 +66,245 @@ export function OverviewClient({
   errorCount,
   agents,
 }: OverviewClientProps) {
+  const stoppedCount = agentCount - runningCount - errorCount
   const uptimePercent = agentCount > 0 ? Math.round((runningCount / agentCount) * 100) : 0
 
   return (
-    <div className="p-6 lg:p-8">
-      {/* Header */}
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <BlurFade inView delay={0}>
-        <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[28px] font-black tracking-[-0.03em] text-neutral-900">
-              Overview
-            </h1>
-            <p className="mt-1 text-[14px] text-neutral-500">
-              Your infrastructure at a glance.
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
+            <p className="text-sm text-muted-foreground">Your infrastructure at a glance.</p>
           </div>
-          <Link
-            href="/dashboard/deploy"
-            className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-neutral-700 active:scale-[0.97]"
-          >
-            <Rocket className="size-3.5" />
-            Deploy Agent
-          </Link>
+          <Button asChild size="sm">
+            <Link href="/dashboard/deploy">
+              <Rocket className="mr-1.5 size-3.5" />
+              Deploy Agent
+            </Link>
+          </Button>
         </div>
       </BlurFade>
 
-      {/* Stat cards */}
+      {/* Stat cards — dashboard-01 layout */}
       <BlurFade inView delay={0.05}>
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Total agents */}
-          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-neutral-100">
-                <Server className="size-4.5 text-neutral-600" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
+              <Bot className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {agentCount > 0 ? <NumberTicker value={agentCount} /> : "0"}
               </div>
-              <div>
-                <p className="text-[12px] font-medium text-neutral-400">Total agents</p>
-                <p className="text-[28px] font-black tracking-[-0.03em] text-neutral-900">
-                  {agentCount > 0 ? <NumberTicker value={agentCount} /> : "0"}
-                </p>
-              </div>
-            </div>
-          </div>
+              <p className="text-xs text-muted-foreground">
+                {agentCount === 0 ? "No agents deployed yet" : `${runningCount} currently active`}
+              </p>
+            </CardContent>
+          </Card>
 
-          {/* Running */}
-          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50">
-                <Activity className="size-4.5 text-emerald-600" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Running</CardTitle>
+              <Activity className="size-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-600">
+                {runningCount > 0 ? <NumberTicker value={runningCount} /> : "0"}
               </div>
-              <div>
-                <p className="text-[12px] font-medium text-neutral-400">Running</p>
-                <p className="text-[28px] font-black tracking-[-0.03em] text-emerald-600">
-                  {runningCount > 0 ? <NumberTicker value={runningCount} /> : "0"}
-                </p>
-              </div>
-            </div>
-            {runningCount > 0 && <BorderBeam size={80} borderWidth={1.5} colorFrom="#10b981" colorTo="#34d399" />}
-          </div>
+              <p className="text-xs text-muted-foreground">
+                {runningCount > 0 ? "Serving requests" : "No agents running"}
+              </p>
+            </CardContent>
+          </Card>
 
-          {/* Errors */}
-          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-red-50">
-                <AlertTriangle className="size-4.5 text-red-500" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Errors</CardTitle>
+              <AlertTriangle className="size-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className={cn("text-2xl font-bold", errorCount > 0 ? "text-red-500" : "text-foreground")}>
+                {errorCount > 0 ? <NumberTicker value={errorCount} /> : "0"}
               </div>
-              <div>
-                <p className="text-[12px] font-medium text-neutral-400">Errors</p>
-                <p className="text-[28px] font-black tracking-[-0.03em] text-red-500">
-                  {errorCount > 0 ? <NumberTicker value={errorCount} /> : "0"}
-                </p>
-              </div>
-            </div>
-            {errorCount > 0 && <BorderBeam size={80} borderWidth={1.5} colorFrom="#ef4444" colorTo="#f87171" />}
-          </div>
+              <p className="text-xs text-muted-foreground">
+                {errorCount === 0 ? "All clear" : "Need attention"}
+              </p>
+            </CardContent>
+          </Card>
 
-          {/* Uptime */}
-          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="flex items-center gap-3">
-              <AnimatedCircularProgressBar
-                max={100}
-                value={uptimePercent}
-                min={0}
-                gaugePrimaryColor="#f97316"
-                gaugeSecondaryColor="#e5e5e5"
-                className="size-12"
-              />
-              <div>
-                <p className="text-[12px] font-medium text-neutral-400">Fleet health</p>
-                <p className="text-[28px] font-black tracking-[-0.03em] text-neutral-900">
-                  {uptimePercent}%
-                </p>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Fleet Health</CardTitle>
+              <TrendingUp className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <AnimatedCircularProgressBar
+                  max={100}
+                  value={uptimePercent}
+                  min={0}
+                  gaugePrimaryColor={uptimePercent >= 90 ? "#10b981" : uptimePercent >= 60 ? "#f59e0b" : "#ef4444"}
+                  gaugeSecondaryColor="#e5e7eb"
+                  className="size-12"
+                />
+                <div>
+                  <p className="text-2xl font-bold">{uptimePercent}%</p>
+                  <p className="text-xs text-muted-foreground">uptime</p>
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </BlurFade>
 
       {/* Recent agents */}
       <BlurFade inView delay={0.1}>
-        <div className="rounded-2xl border border-neutral-200 bg-white">
-          <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
-            <h2 className="text-[15px] font-bold text-neutral-900">Recent Agents</h2>
-            <Link href="/dashboard/agents" className="text-[12px] font-medium text-neutral-400 hover:text-neutral-700">
-              View all →
-            </Link>
-          </div>
-
-          {agents.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <div className="flex size-12 items-center justify-center rounded-xl bg-neutral-100">
-                <Server className="size-5 text-neutral-400" />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Agents</CardTitle>
+                  <CardDescription>Your last deployed agents and their status.</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/dashboard/agents">View all →</Link>
+                </Button>
               </div>
-              <p className="text-[14px] font-medium text-neutral-500">No agents yet</p>
-              <Link
-                href="/dashboard/deploy"
-                className="rounded-full bg-neutral-900 px-4 py-2 text-[12px] font-semibold text-white hover:bg-neutral-700"
-              >
-                Deploy your first agent
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-neutral-100">
-              {agents.slice(0, 5).map((agent) => (
-                <Link
-                  key={agent.id}
-                  href={`/dashboard/agents/${agent.id}`}
-                  className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-neutral-50"
-                >
-                  <div className={cn("size-2 rounded-full", statusColor[agent.status])} />
-                  <div className="flex-1">
-                    <p className="text-[13px] font-semibold text-neutral-900">{agent.name}</p>
-                    <p className="text-[11px] text-neutral-400">
-                      {regionLabel[agent.region] ?? agent.region} · {statusLabel[agent.status]}
-                    </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {agents.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <div className="flex size-12 items-center justify-center rounded-xl border bg-muted">
+                    <Bot className="size-5 text-muted-foreground" />
                   </div>
-                  <span className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-                    agent.status === "running" && "bg-emerald-50 text-emerald-700",
-                    agent.status === "provisioning" && "bg-amber-50 text-amber-700",
-                    agent.status === "stopped" && "bg-neutral-100 text-neutral-500",
-                    agent.status === "error" && "bg-red-50 text-red-600",
-                  )}>
-                    {statusLabel[agent.status]}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
+                  <div>
+                    <p className="text-sm font-medium">No agents yet</p>
+                    <p className="text-xs text-muted-foreground">Deploy your first agent to get started.</p>
+                  </div>
+                  <Button asChild size="sm" className="mt-2">
+                    <Link href="/dashboard/deploy">Deploy your first agent</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {agents.slice(0, 6).map((agent) => (
+                    <Link
+                      key={agent.id}
+                      href={`/dashboard/agents/${agent.id}`}
+                      className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-muted/50"
+                    >
+                      <div className={cn("size-2 shrink-0 rounded-full", statusColor[agent.status])} />
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm font-medium">{agent.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {regionLabel[agent.region] ?? agent.region}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[11px] font-medium", statusBadge[agent.status])}
+                      >
+                        {statusLabel[agent.status]}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            {agents.length > 0 && (
+              <CardFooter className="border-t pt-4">
+                <p className="text-xs text-muted-foreground">
+                  Showing {Math.min(agents.length, 6)} of {agents.length} agents
+                </p>
+              </CardFooter>
+            )}
+          </Card>
+
+          {/* Quick status panel */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Status Breakdown</CardTitle>
+              <CardDescription>All agents by current state.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <StatusRow
+                icon={<CheckCircle2 className="size-4 text-emerald-500" />}
+                label="Running"
+                value={runningCount}
+                total={agentCount}
+                color="bg-emerald-500"
+              />
+              <StatusRow
+                icon={<Clock className="size-4 text-amber-500" />}
+                label="Provisioning"
+                value={agents.filter((a) => a.status === "provisioning").length}
+                total={agentCount}
+                color="bg-amber-500"
+              />
+              <StatusRow
+                icon={<AlertTriangle className="size-4 text-red-500" />}
+                label="Error"
+                value={errorCount}
+                total={agentCount}
+                color="bg-red-500"
+              />
+              <StatusRow
+                icon={<Bot className="size-4 text-muted-foreground" />}
+                label="Stopped"
+                value={stoppedCount > 0 ? stoppedCount : 0}
+                total={agentCount}
+                color="bg-neutral-400"
+              />
+            </CardContent>
+            {agentCount === 0 && (
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full" asChild>
+                  <Link href="/dashboard/deploy">
+                    <Rocket className="mr-1.5 size-3.5" />
+                    Deploy your first agent
+                  </Link>
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
         </div>
       </BlurFade>
+    </div>
+  )
+}
+
+function StatusRow({
+  icon,
+  label,
+  value,
+  total,
+  color,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: number
+  total: number
+  color: string
+}) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="font-medium">{label}</span>
+        </div>
+        <span className="text-muted-foreground">{value}</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted">
+        <div
+          className={cn("h-1.5 rounded-full transition-all", color)}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   )
 }

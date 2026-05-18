@@ -1,29 +1,54 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  Server,
+  Bot,
   Rocket,
   CreditCard,
   Settings,
-  Cloud,
   LogOut,
-  ChevronLeft,
-  Menu,
+  Flame,
+  Plus,
+  ChevronRight,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
-import { useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import { AnimatePresence, motion } from "motion/react"
 import { useSyncPlanStore } from "@/hooks/use-sync-plan"
 
-const nav = [
+const mainNav = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Agents", href: "/dashboard/agents", icon: Server },
+  { label: "Agents", href: "/dashboard/agents", icon: Bot },
   { label: "Deploy", href: "/dashboard/deploy", icon: Rocket },
-  { label: "Cloud", href: "/dashboard/cloud", icon: Cloud },
+]
+
+const accountNav = [
   { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
@@ -35,10 +60,7 @@ interface DashboardShellProps {
 
 export function DashboardShell({ user, children }: DashboardShellProps) {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Sync subscription data into Zustand store
   useSyncPlanStore()
 
   const isActive = (href: string) => {
@@ -46,134 +68,178 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
     return pathname.startsWith(href)
   }
 
-  const SidebarContent = () => (
-    <>
-      {/* Logo */}
-      <div className="flex h-14 items-center gap-2 border-b border-neutral-100 px-4">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-neutral-900">
-          <span className="text-[11px] font-black text-white">FC</span>
-        </div>
-        {!collapsed && (
-          <span className="text-[14px] font-bold tracking-[-0.02em] text-neutral-900">
-            FIRECLAW
-          </span>
-        )}
-      </div>
-
-      {/* Nav */}
-      <nav className="flex flex-1 flex-col gap-1 p-3">
-        {nav.map((item) => {
-          const active = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-150",
-                active
-                  ? "bg-neutral-900 text-white shadow-sm"
-                  : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-              )}
-            >
-              <item.icon className={cn("size-4 shrink-0", active ? "text-white" : "text-neutral-400 group-hover:text-neutral-600")} />
-              {!collapsed && item.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* User + Logout */}
-      <div className="border-t border-neutral-100 p-3">
-        <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2", collapsed && "justify-center")}>
-          {user.image ? (
-            <img src={user.image} alt="" className="size-7 rounded-full" />
-          ) : (
-            <div className="flex size-7 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-bold text-neutral-600">
-              {user.name?.charAt(0) ?? "U"}
-            </div>
-          )}
-          {!collapsed && (
-            <div className="flex-1 truncate">
-              <p className="truncate text-[12px] font-semibold text-neutral-900">{user.name}</p>
-              <p className="truncate text-[11px] text-neutral-400">{user.email}</p>
-            </div>
-          )}
-        </div>
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className={cn(
-            "mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-600",
-            collapsed && "justify-center"
-          )}
-        >
-          <LogOut className="size-4" />
-          {!collapsed && "Sign out"}
-        </button>
-      </div>
-    </>
-  )
+  const initials = user.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "FC"
 
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-50">
-      {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          "hidden flex-col border-r border-neutral-200 bg-white transition-all duration-200 lg:flex",
-          collapsed ? "w-16" : "w-60"
-        )}
-      >
-        <SidebarContent />
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="absolute bottom-4 left-[inherit] -right-3 z-20 hidden size-6 items-center justify-center rounded-full border border-neutral-200 bg-white shadow-sm transition-colors hover:bg-neutral-50 lg:flex"
-          style={{ left: collapsed ? "3.5rem" : "14.25rem" }}
-        >
-          <ChevronLeft className={cn("size-3 text-neutral-500 transition-transform", collapsed && "rotate-180")} />
-        </button>
-      </aside>
+    <SidebarProvider>
+      <Sidebar variant="inset">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/dashboard">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-neutral-900 text-white">
+                    <Flame className="size-4 text-orange-400" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold tracking-[-0.02em]">FireClaw</span>
+                    <span className="truncate text-xs text-muted-foreground">Agent Platform</span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed left-0 top-0 z-50 flex h-full w-60 flex-col border-r border-neutral-200 bg-white lg:hidden"
-            >
-              <SidebarContent />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/dashboard/deploy">
+                      <Plus className="size-4" />
+                      <span>New Agent</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-      {/* Main */}
-      <main className="flex flex-1 flex-col overflow-auto">
-        {/* Top bar (mobile) */}
-        <div className="flex h-14 items-center gap-4 border-b border-neutral-200 bg-white px-4 lg:hidden">
-          <button onClick={() => setMobileOpen(true)}>
-            <Menu className="size-5 text-neutral-600" />
-          </button>
-          <span className="text-[14px] font-bold tracking-[-0.02em] text-neutral-900">
-            FIRECLAW
-          </span>
-        </div>
+          <SidebarGroup>
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {mainNav.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                      <Link href={item.href}>
+                        <item.icon className="size-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-        {/* Page content */}
-        <div className="flex-1 overflow-auto">
+          <SidebarGroup>
+            <SidebarGroupLabel>Account</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {accountNav.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                      <Link href={item.href}>
+                        <item.icon className="size-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage src={user.image ?? ""} alt={user.name ?? ""} />
+                      <AvatarFallback className="rounded-lg text-xs font-bold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">{user.name ?? "User"}</span>
+                      <span className="truncate text-xs text-muted-foreground">{user.email ?? ""}</span>
+                    </div>
+                    <ChevronRight className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/settings">
+                      <Settings className="mr-2 size-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                  >
+                    <LogOut className="mr-2 size-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+
+        <SidebarRail />
+      </Sidebar>
+
+      <main className="flex flex-1 flex-col overflow-auto peer-data-[variant=inset]:min-h-svh md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow">
+        {/* Header bar */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4 md:px-6">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <BreadcrumbNav pathname={pathname} />
+        </header>
+
+        <div className="flex flex-1 flex-col overflow-auto bg-background">
           {children}
         </div>
       </main>
-    </div>
+    </SidebarProvider>
+  )
+}
+
+function BreadcrumbNav({ pathname }: { pathname: string }) {
+  const segments = pathname.replace("/dashboard", "").split("/").filter(Boolean)
+  const labels: Record<string, string> = {
+    agents: "Agents",
+    deploy: "Deploy",
+    billing: "Billing",
+    settings: "Settings",
+    new: "New Agent",
+  }
+
+  if (segments.length === 0) return <span className="text-sm font-medium text-foreground">Overview</span>
+
+  return (
+    <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+      {segments.map((seg, i) => {
+        const isLast = i === segments.length - 1
+        const label = labels[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1)
+        return (
+          <span key={seg} className="flex items-center gap-1.5">
+            <ChevronRight className="size-3.5" />
+            <span className={cn(isLast ? "font-medium text-foreground" : "hover:text-foreground transition-colors")}>
+              {label}
+            </span>
+          </span>
+        )
+      })}
+    </nav>
   )
 }
