@@ -30,16 +30,16 @@ export function Hero() {
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               href="/auth/signin"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-violet-600/20 transition-all duration-200 hover:bg-violet-700 hover:shadow-violet-600/30"
+              className="inline-flex items-center justify-center gap-2 rounded-4xl bg-violet-700 px-6 py-3.5 text-base font-semibold text-white  transition-all duration-200 hover:bg-violet-700 hover:shadow-violet-600/30"
             >
-              Start Deploying
+              Start Now
               <ArrowRight className="size-4" />
             </Link>
             <Link
               href="#agent-templates"
               className="text-base font-medium text-neutral-700 transition-colors hover:text-neutral-900"
             >
-              Explore agents →
+              See all agents
             </Link>
           </div>
         </div>
