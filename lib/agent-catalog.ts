@@ -6,6 +6,7 @@ export type AgentTemplateId =
   | "market-trends"
   | "shopping-assistant"
   | "business-analyst"
+  | "seo-agent"
   | "custom-agent";
 
 export type PlanId = "starter" | "growth" | "agency" | "custom";
@@ -16,7 +17,7 @@ export interface AgentTemplate {
   name: string;
   category: string;
   description: string;
-  runtime: "openclaw" | "adk-python" | "adk-typescript" | "managed-custom";
+  runtime: "openclaw" | "managed-custom";
   minimumPlan: PlanId;
   defaultModelProvider: "minimax";
   requiredSecrets: string[];
@@ -111,7 +112,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Customer Support",
     category: "Support",
     description: "Answers FAQs, triages tickets, and escalates unresolved customer issues.",
-    runtime: "adk-typescript",
+    runtime: "openclaw",
     minimumPlan: "starter",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
@@ -123,7 +124,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Research Analyst",
     category: "Research",
     description: "Finds sources, compares claims, and turns research into structured briefs.",
-    runtime: "adk-python",
+    runtime: "openclaw",
     minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
@@ -147,7 +148,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Document Intake",
     category: "Operations",
     description: "Reads uploaded documents and extracts useful structured business data.",
-    runtime: "adk-python",
+    runtime: "openclaw",
     minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
@@ -159,7 +160,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Market Trends",
     category: "Marketing",
     description: "Tracks topics, summarizes changes, and produces trend reports.",
-    runtime: "adk-python",
+    runtime: "openclaw",
     minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
@@ -183,8 +184,20 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Business Analyst",
     category: "Analytics",
     description: "Turns business questions and spreadsheets into decisions and reports.",
-    runtime: "adk-python",
+    runtime: "openclaw",
     minimumPlan: "agency",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "deployable",
+  },
+  {
+    id: "seo-agent",
+    name: "SEO Agent",
+    category: "Marketing",
+    description: "Analyzes your pages and content, finds ranking opportunities, and delivers actionable improvements so more customers find you in search.",
+    runtime: "openclaw",
+    minimumPlan: "growth",
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",

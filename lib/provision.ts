@@ -1,4 +1,6 @@
 import { randomBytes } from "crypto";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { deleteServer, rebootServer, shutdownServer, getServer, changeServerProtection, updateServer } from "./hetzner";
 import { createDNSRecord, deleteDNSRecord, generateSubdomain } from "./cloudflare";
 import { updateAgent, pushProvisionLog } from "./agents";
@@ -19,6 +21,7 @@ function buildCloudInit(opts: {
   anthropicApiKey?: string;
   minimaxApiKey?: string;
   ghcrToken?: string;
+  systemPrompt?: string;
 }): string {
   const openclawImage = process.env.OPENCLAW_DOCKER_IMAGE || "ghcr.io/akashmahlaz/openclaw:fireclaw-latest";
 
@@ -100,54 +103,46 @@ ${opts.domain} {
   // Escape the gateway token for JSON embedding
   const gatewayTokenJson = JSON.stringify(opts.gatewayToken);
 
-  // Build the OpenClaw JSON config with AI provider settings
-  const aiProviderConfig = opts.openaiApiKey
-    ? `,
-  "agents": {
-    "defaults": {
-      "model": "openai/gpt-4o",
-      "fallbackModels": ["openai/gpt-4o-mini"]
-    }
-  },
-  "models": {
-    "providers": {
-      "openai": {
-        "apiKey": "${opts.openaiApiKey}"
-      }
-    }
-  }`
-    : opts.anthropicApiKey
-    ? `,
-  "agents": {
-    "defaults": {
-      "model": "anthropic/claude-sonnet-4-20250514",
-      "fallbackModels": ["anthropic/claude-haiku-4-20250414"]
-    }
-  },
-  "models": {
-    "providers": {
-      "anthropic": {
-        "apiKey": "${opts.anthropicApiKey}"
-      }
-    }
-  }`
-    : opts.minimaxApiKey
-    ? `,
-  "agents": {
-    "defaults": {
-      "model": "minimax/MiniMax-M2.7",
-      "fallbackModels": ["minimax/MiniMax-M2.7-highspeed"]
-    }
-  },
-  "models": {
-    "providers": {
-      "minimax": {
-        "apiKey": "${opts.minimaxApiKey}",
-        "baseUrl": "https://api.minimax.io/anthropic"
-      }
-    }
-  }`
-    : '';
+  // Build the OpenClaw JSON config as a proper object so values are correctly escaped
+  const agentDefaults: Record<string, unknown> = {};
+  if (opts.systemPrompt) agentDefaults.systemPrompt = opts.systemPrompt;
+  if (opts.openaiApiKey) {
+    agentDefaults.model = "openai/gpt-4o";
+    agentDefaults.fallbackModels = ["openai/gpt-4o-mini"];
+  } else if (opts.anthropicApiKey) {
+    agentDefaults.model = "anthropic/claude-sonnet-4-20250514";
+    agentDefaults.fallbackModels = ["anthropic/claude-haiku-4-20250414"];
+  } else if (opts.minimaxApiKey) {
+    agentDefaults.model = "minimax/MiniMax-M2.7";
+    agentDefaults.fallbackModels = ["minimax/MiniMax-M2.7-highspeed"];
+  }
+
+  const providers: Record<string, unknown> = {};
+  if (opts.openaiApiKey) providers.openai = { apiKey: opts.openaiApiKey };
+  if (opts.anthropicApiKey) providers.anthropic = { apiKey: opts.anthropicApiKey };
+  if (opts.minimaxApiKey) providers.minimax = { apiKey: opts.minimaxApiKey, baseUrl: "https://api.minimax.io/anthropic" };
+
+  const openclawConfig: Record<string, unknown> = {
+    gateway: {
+      auth: { token: opts.gatewayToken },
+      bind: "lan",
+      port: 18789,
+      trustedProxies: ["172.16.0.0/12", "10.0.0.0/8", "127.0.0.1"],
+      controlUi: {
+        allowedOrigins: [`https://${opts.domain}`],
+        dangerouslyDisableDeviceAuth: true,
+      },
+    },
+  };
+
+  if (Object.keys(agentDefaults).length > 0) {
+    openclawConfig.agents = { defaults: agentDefaults };
+  }
+  if (Object.keys(providers).length > 0) {
+    openclawConfig.models = { providers };
+  }
+
+  const configJson = JSON.stringify(openclawConfig, null, 2);
 
   // Build a webhook helper function for the bash script
   const webhookFn = opts.webhookUrl && opts.webhookSecret
@@ -207,21 +202,8 @@ mkdir -p /root/.openclaw/workspace
 chown -R 1000:1000 /root/.openclaw
 
 # ── Write initial OpenClaw config ───────────────────────────────────
-cat > /root/.openclaw/openclaw.json << CONFIGEOF
-{
-  "gateway": {
-    "auth": {
-      "token": ${gatewayTokenJson}
-    },
-    "bind": "lan",
-    "port": 18789,
-    "trustedProxies": ["172.16.0.0/12", "10.0.0.0/8", "127.0.0.1"],
-    "controlUi": {
-      "allowedOrigins": ["https://${opts.domain}"],
-      "dangerouslyDisableDeviceAuth": true
-    }
-  }${aiProviderConfig}
-}
+cat > /root/.openclaw/openclaw.json << 'CONFIGEOF'
+${configJson}
 CONFIGEOF
 chown 1000:1000 /root/.openclaw/openclaw.json
 report "⚙️ OpenClaw config written" "ok"
@@ -361,10 +343,25 @@ export function generateGatewayToken(): string {
  * 3. Create Cloudflare A record pointing subdomain → VPS IP
  * 4. Update agent record with server info + domain
  */
+/**
+ * Load a per-agent system prompt from config/agents/<templateId>.md.
+ * Returns undefined if the file does not exist (no system prompt injection).
+ */
+function loadSystemPrompt(templateId: string | undefined): string | undefined {
+  if (!templateId) return undefined;
+  try {
+    const configPath = join(process.cwd(), "config", "agents", `${templateId}.md`);
+    return readFileSync(configPath, "utf-8").trim();
+  } catch {
+    return undefined;
+  }
+}
+
 export async function provisionAgent(opts: {
   agentId: string;
   userId: string;
   name: string;
+  templateId?: string;
   region?: string;
   tier?: string;
   openaiApiKey?: string;
@@ -424,6 +421,7 @@ export async function provisionAgent(opts: {
     anthropicApiKey: opts.anthropicApiKey,
     minimaxApiKey: process.env.MINIMAX_API_KEY || process.env.MINIMAX_CODE_PLAN_KEY || undefined,
     ghcrToken: process.env.GHCR_TOKEN || undefined,
+    systemPrompt: loadSystemPrompt(opts.templateId),
   });
   console.log(`[provision] Agent ${opts.agentId}: cloud-init script generated (${userData.length} bytes)`);
 

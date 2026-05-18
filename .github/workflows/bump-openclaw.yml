@@ -1,0 +1,147 @@
+name: Bump OpenClaw image tag
+
+# Triggers:
+# 1. Manually (workflow_dispatch) to bump to any specific tag
+# 2. On a schedule — checks for a new "fireclaw-latest" digest every night
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'OpenClaw image tag to bump to (e.g. fireclaw-v1.2.3). Leave blank to resolve the latest digest.'
+        required: false
+        default: ''
+  schedule:
+    # 03:00 UTC every day
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # ── Resolve the current digest pinned in provision.ts ──────────
+      - name: Read current image reference
+        id: current
+        run: |
+          VALUE=$(grep -oP 'OPENCLAW_DOCKER_IMAGE\s*\|\|\s*"\K[^"]+' lib/provision.ts || echo "")
+          if [ -z "$VALUE" ]; then
+            VALUE="ghcr.io/akashmahlaz/openclaw:fireclaw-latest"
+          fi
+          echo "ref=$VALUE" >> "$GITHUB_OUTPUT"
+
+      # ── Determine target tag ────────────────────────────────────────
+      - name: Resolve target tag
+        id: target
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          IMAGE="ghcr.io/akashmahlaz/openclaw"
+          TAG="${INPUT_TAG:-fireclaw-latest}"
+
+          # Pull the manifest digest for the target tag
+          DIGEST=$(docker manifest inspect "$IMAGE:$TAG" 2>/dev/null \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('config',{}).get('digest',''))" \
+            || echo "")
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "full_ref=$IMAGE:$TAG" >> "$GITHUB_OUTPUT"
+
+      # ── Compare digest to detect a real change ──────────────────────
+      - name: Check if update is needed
+        id: check
+        env:
+          CURRENT_REF: ${{ steps.current.outputs.ref }}
+          TARGET_REF: ${{ steps.target.outputs.full_ref }}
+          TARGET_DIGEST: ${{ steps.target.outputs.digest }}
+        run: |
+          if [ "$CURRENT_REF" = "$TARGET_REF" ] && [ -z "$TARGET_DIGEST" ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "No change detected — skipping."
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Smoke test: pull the new image and verify /healthz responds ─
+      - name: Smoke test new image
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          NEW_IMAGE: ${{ steps.target.outputs.full_ref }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u akashmahlaz --password-stdin
+
+          docker pull "$NEW_IMAGE"
+
+          # Start openclaw with a dummy token and wait for health
+          docker run -d --name openclaw-smoke \
+            -p 18789:18789 \
+            -e OPENCLAW_GATEWAY_TOKEN=smoketest \
+            -e OPENCLAW_GATEWAY_BIND=lan \
+            -e OPENCLAW_GATEWAY_PORT=18789 \
+            "$NEW_IMAGE" \
+            node openclaw.mjs gateway --bind lan --port 18789 --allow-unconfigured
+
+          echo "Waiting up to 60s for health check..."
+          for i in $(seq 1 12); do
+            if curl -fsS http://localhost:18789/healthz >/dev/null 2>&1; then
+              echo "Health check passed on attempt $i"
+              break
+            fi
+            if [ $i -eq 12 ]; then
+              echo "ERROR: health check timed out after 60s"
+              docker logs openclaw-smoke
+              docker rm -f openclaw-smoke
+              exit 1
+            fi
+            sleep 5
+          done
+
+          docker rm -f openclaw-smoke
+          echo "Smoke test passed."
+
+      # ── Bump the image reference in provision.ts ────────────────────
+      - name: Bump image reference in provision.ts
+        if: steps.check.outputs.needed == 'true'
+        env:
+          NEW_REF: ${{ steps.target.outputs.full_ref }}
+        run: |
+          # Replace the fallback default image string in provision.ts
+          sed -i "s|\"ghcr.io/akashmahlaz/openclaw:[^\"]*\"|\"$NEW_REF\"|g" lib/provision.ts
+          echo "Updated provision.ts to use $NEW_REF"
+
+      # ── Open a PR with the change ───────────────────────────────────
+      - name: Create pull request
+        if: steps.check.outputs.needed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/bump-openclaw-${{ steps.target.outputs.tag }}-${{ github.run_number }}
+          base: main
+          commit-message: "chore(openclaw): bump image to ${{ steps.target.outputs.full_ref }}"
+          title: "chore(openclaw): bump OpenClaw image → ${{ steps.target.outputs.tag }}"
+          body: |
+            ## OpenClaw image bump
+
+            | | Value |
+            |---|---|
+            | **New image** | `${{ steps.target.outputs.full_ref }}` |
+            | **Previous** | `${{ steps.current.outputs.ref }}` |
+            | **Smoke test** | ✅ passed |
+
+            This PR was opened automatically by the `bump-openclaw` workflow.
+            Review and merge to deploy the updated agent runtime to all new provisions.
+
+            > Existing running agents are not affected — they pin the image at deploy time.
+          labels: |
+            dependencies
+            automated

@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
     agentId,
     userId,
     name: name.trim(),
+    templateId: template.id,
     region,
     tier: agentTier,
     openaiApiKey: aiProvider === "anthropic" ? undefined : apiKey || undefined,
