@@ -4,9 +4,9 @@ import { ArrowRight } from "lucide-react"
 
 export function Hero() {
   return (
-    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-white">
+    <section className="relative min-h-screen overflow-hidden bg-white">
       <Image
-        src="/hero1.png"
+        src="/hero2.png"
         alt="Operator working calmly while AI agents complete business tasks"
         fill
         priority
