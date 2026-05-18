@@ -151,3 +151,6 @@ export async function POST(request: NextRequest) {
         sendDeployFailureEmail(session.user.email, name.trim(), err instanceof Error ? err.message : "Unknown error").catch(() => {});
       }
     }));
+
+  return Response.json({ id: agentId, status: "provisioning" }, { status: 202 });
+}
