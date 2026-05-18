@@ -1,6 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Hero } from "@/components/layout/Hero";
+import { CustomAgentStrip } from "@/components/layout/CustomAgentStrip";
 import { AgentTemplates } from "@/components/layout/AgentTemplates";
 import { Features } from "@/components/layout/Features";
 import { HowItWorks } from "@/components/layout/HowItWorks";
@@ -15,10 +16,9 @@ export default function Home() {
       <AnnouncementBar />
       <Navbar />
       <Hero />
-      <HowItWorks />
-      <AgentTemplates />
-      <Features />
-      <Pricing />
+    
+      
+      
       <FAQ />
       <CTA />
       <Footer />
