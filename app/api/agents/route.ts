@@ -6,7 +6,12 @@ import { checkDeployQuota } from "@/lib/subscriptions";
 import { sendDeploySuccessEmail, sendDeployFailureEmail } from "@/lib/email";
 import { AGENT_TEMPLATES, getPlan, getTemplate, isTemplateAvailableOnPlan } from "@/lib/agent-catalog";
 import { getProvider } from "@/lib/providers";
+import { waitUntil } from "@vercel/functions";
 import { NextRequest } from "next/server";
+
+// Keep this function alive for up to 800 s after the response is sent
+// so the background provision + health-check (≤10 min) always completes.
+export const maxDuration = 800;
 
 async function chooseCostEffectiveLocation(tier: string): Promise<string> {
   const fallback = "fsn1";
@@ -68,6 +73,9 @@ export async function POST(request: NextRequest) {
   if (!AGENT_TEMPLATES.some((item) => item.id === templateId)) {
     return Response.json({ error: "Invalid template" }, { status: 400 });
   }
+  if (template.status !== "deployable") {
+    return Response.json({ error: `${template.name} is not available for deployment yet.` }, { status: 400 });
+  }
 
   const plan = getPlan(planId);
   if (!isTemplateAvailableOnPlan(template.id, plan.id)) {
@@ -96,9 +104,10 @@ export async function POST(request: NextRequest) {
 
   const agentId = agent._id!.toString();
 
-  // Provision VPS with OpenClaw in the background — don't block the response
+  // Provision VPS with OpenClaw in the background — don't block the response.
+  // waitUntil keeps the Vercel function alive until provisioning completes (maxDuration=800s).
   console.log(`[deploy] Agent ${agentId}: starting background provisioning (region=${region}, tier=${agentTier}, plan=${plan.id}, template=${template.id}, hasUserApiKey=${!!apiKey})`);
-  provisionAgent({
+  waitUntil(provisionAgent({
     agentId,
     userId,
     name: name.trim(),
@@ -141,7 +150,4 @@ export async function POST(request: NextRequest) {
       if (session.user?.email) {
         sendDeployFailureEmail(session.user.email, name.trim(), err instanceof Error ? err.message : "Unknown error").catch(() => {});
       }
-    });
-
-  return Response.json(agent, { status: 201 });
-}
+    }));
