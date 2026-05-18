@@ -1,32 +1,37 @@
-import { auth } from "@/auth"
-import { redirect } from "next/navigation"
-import { getAgentsByUser, countAgentsByUser } from "@/lib/agents"
-import { OverviewClient } from "@/components/dashboard/overview-client"
+import { AppSidebar } from "@/components/app-sidebar"
+import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import { DataTable } from "@/components/data-table"
+import { SectionCards } from "@/components/section-cards"
+import { SiteHeader } from "@/components/site-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
-export default async function DashboardOverview() {
-  const session = await auth()
-  if (!session?.user?.id) redirect("/auth/signin")
+import data from "./data.json"
 
-  const [agents, agentCount] = await Promise.all([
-    getAgentsByUser(session.user.id),
-    countAgentsByUser(session.user.id),
-  ])
-
-  const running = agents.filter((a) => a.status === "running").length
-  const errors = agents.filter((a) => a.status === "error").length
-
+export default function Page() {
   return (
-    <OverviewClient
-      agentCount={agentCount}
-      runningCount={running}
-      errorCount={errors}
-      agents={agents.map((a) => ({
-        id: a._id!.toString(),
-        name: a.name,
-        status: a.status,
-        region: a.region,
-        createdAt: a.createdAt.toISOString(),
-      }))}
-    />
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <SectionCards />
+              <div className="px-4 lg:px-6">
+                <ChartAreaInteractive />
+              </div>
+              <DataTable data={data} />
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
