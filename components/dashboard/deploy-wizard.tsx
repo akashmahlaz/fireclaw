@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Rocket, Sparkles, XCircle, ExternalLink, Bot } from "lucide-react"
+jimport { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Rocket, Sparkles, XCircle, ExternalLink, Bot } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AGENT_TEMPLATES, FIRECLAW_PLANS, getPlan, isTemplateAvailableOnPlan } from "@/lib/agent-catalog"
 import { BlurFade } from "@/components/ui/blur-fade"
