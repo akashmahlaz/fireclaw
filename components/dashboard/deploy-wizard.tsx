@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-jimport { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Rocket, Sparkles, XCircle, ExternalLink, Bot } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Rocket, Sparkles, XCircle, ExternalLink, Bot } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AGENT_TEMPLATES, FIRECLAW_PLANS, getPlan, isTemplateAvailableOnPlan } from "@/lib/agent-catalog"
 import { BlurFade } from "@/components/ui/blur-fade"
@@ -369,26 +369,6 @@ export function DeployWizardClient() {
                     className="rounded-lg bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
                   >
                     Go to dashboard
-                  </button>
-                </div>
-              )}
-
-              <Confetti ref={confettiRef} className="pointer-events-none absolute left-0 top-0 z-50 size-full" />
-            </div>
-          )}a
-                      href={`https://${agentDomain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[13px] font-medium text-orange-600 underline"
-                    >
-                      {agentDomain}
-                    </a>
-                  )}
-                  <button
-                    onClick={() => agentId && router.push(`/dashboard/agents/${agentId}`)}
-                    className="rounded-full bg-neutral-900 px-5 py-2.5 text-[13px] font-semibold text-white hover:bg-neutral-700"
-                  >
-                    View Agent
                   </button>
                 </div>
               )}

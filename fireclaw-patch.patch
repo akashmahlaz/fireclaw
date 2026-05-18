@@ -1,0 +1,2602 @@
+From d90bae30f1aa43deedbc2dcb65c4880afa7aa2dc Mon Sep 17 00:00:00 2001
+From: FireClaw Agent <agent@fireclaw.local>
+Date: Fri, 24 Apr 2026 17:09:02 +0530
+Subject: [PATCH] feat(fireclaw): multi-provider API key system + WhatsApp
+ topbar + bundled web-login fallback (rebase-safe)
+
+Squashes 4 prior fork commits into one rebase-safe refactor. All extension logic lives in dedicated fireclaw/ namespaces (ui/src/ui/fireclaw/, ui/src/styles/fireclaw.css, src/gateway/server-methods/fireclaw-web-fallback.ts). Hot upstream files (app-render.ts, app-render.helpers.ts, web.ts, layout.css) are touched only by tiny import + mount hooks (or not at all) so weekly upstream rebases stay near-conflict-free.
+
+Includes: multi-provider API key registry (16 providers), curated model catalogs, WhatsApp topbar dropdown, GitHub Actions Docker workflow for ghcr.io/akashmahlaz/openclaw:fireclaw-latest.
+---
+ .github/workflows/docker-fireclaw.yml         |   60 +
+ .../server-methods/fireclaw-web-fallback.ts   |   23 +
+ src/gateway/server-methods/web.ts             |   10 +-
+ ui/src/styles.css                             |    2 +
+ ui/src/styles/fireclaw.css                    | 1046 +++++++++++++++++
+ ui/src/ui/app-render.helpers.ts               |    5 +-
+ ui/src/ui/app-render.ts                       |   11 +-
+ ui/src/ui/app-view-state.ts                   |   11 +
+ ui/src/ui/app.ts                              |   12 +
+ ui/src/ui/controllers/api-key.ts              |  221 ++++
+ ui/src/ui/controllers/provider-registry.ts    |  284 +++++
+ ui/src/ui/fireclaw/api-key-ui.ts              |  240 ++++
+ ui/src/ui/fireclaw/whatsapp-topbar.ts         |  493 ++++++++
+ 13 files changed, 2405 insertions(+), 13 deletions(-)
+ create mode 100644 .github/workflows/docker-fireclaw.yml
+ create mode 100644 src/gateway/server-methods/fireclaw-web-fallback.ts
+ create mode 100644 ui/src/styles/fireclaw.css
+ create mode 100644 ui/src/ui/controllers/api-key.ts
+ create mode 100644 ui/src/ui/controllers/provider-registry.ts
+ create mode 100644 ui/src/ui/fireclaw/api-key-ui.ts
+ create mode 100644 ui/src/ui/fireclaw/whatsapp-topbar.ts
+
+diff --git a/.github/workflows/docker-fireclaw.yml b/.github/workflows/docker-fireclaw.yml
+new file mode 100644
+index 0000000000..b661826dc2
+--- /dev/null
++++ b/.github/workflows/docker-fireclaw.yml
+@@ -0,0 +1,60 @@
++name: Build FireClaw Docker Image
++
++on:
++  push:
++    branches:
++      - feat/multi-provider-api-key-system-v2
++      - main
++  workflow_dispatch:
++
++concurrency:
++  group: docker-fireclaw-${{ github.ref_name }}
++  cancel-in-progress: true
++
++env:
++  REGISTRY: ghcr.io
++  IMAGE_NAME: ${{ github.repository }}
++
++jobs:
++  build-and-push:
++    runs-on: ubuntu-24.04
++    permissions:
++      contents: read
++      packages: write
++    steps:
++      - name: Checkout
++        uses: actions/checkout@v4
++        with:
++          fetch-depth: 0
++
++      - name: Set up Docker Buildx
++        uses: docker/setup-buildx-action@v3
++
++      - name: Login to GitHub Container Registry
++        uses: docker/login-action@v3
++        with:
++          registry: ${{ env.REGISTRY }}
++          username: ${{ github.repository_owner }}
++          password: ${{ secrets.GITHUB_TOKEN }}
++
++      - name: Extract metadata
++        id: meta
++        uses: docker/metadata-action@v5
++        with:
++          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
++          tags: |
++            type=raw,value=latest,enable={{is_default_branch}}
++            type=raw,value=fireclaw-latest
++            type=sha,prefix=fireclaw-
++
++      - name: Build and push
++        uses: docker/build-push-action@v6
++        with:
++          context: .
++          push: true
++          tags: ${{ steps.meta.outputs.tags }}
++          labels: ${{ steps.meta.outputs.labels }}
++          cache-from: type=gha
++          cache-to: type=gha,mode=max
++          build-args: |
++            OPENCLAW_EXTENSIONS=whatsapp openai anthropic google groq mistral openrouter deepseek together fireworks perplexity xai minimax qwen
+diff --git a/src/gateway/server-methods/fireclaw-web-fallback.ts b/src/gateway/server-methods/fireclaw-web-fallback.ts
+new file mode 100644
+index 0000000000..047f0da2e6
+--- /dev/null
++++ b/src/gateway/server-methods/fireclaw-web-fallback.ts
+@@ -0,0 +1,23 @@
++// FireClaw fork extension — web login provider resolver with bundled-plugin fallback.
++// Upstream's listChannelPlugins() only returns *configured* plugins, but the web QR
++// onboarding flow needs to enumerate bundled-but-not-yet-configured plugins (chicken
++// and egg: you set up WhatsApp via QR, but it can't load until configured).
++// Kept in a dedicated file so upstream rebases of web.ts don't collide with this patch.
++
++import { listChannelPlugins } from "../../channels/plugins/index.js";
++import { listBundledChannelPlugins } from "../../channels/plugins/bundled.js";
++
++const WEB_LOGIN_METHODS = new Set(["web.login.start", "web.login.wait"]);
++
++const pluginRegistersWebLogin = (plugin: { gatewayMethods?: readonly string[] }) =>
++  (plugin.gatewayMethods ?? []).some((method) => WEB_LOGIN_METHODS.has(method));
++
++export const resolveWebLoginProvider = () => {
++  // First check loaded (configured) plugins.
++  const loaded = listChannelPlugins().find(pluginRegistersWebLogin);
++  if (loaded) {return loaded;}
++  // Fall back to bundled plugins so web QR setup works before the channel
++  // has been explicitly configured. This is required for first-time WhatsApp
++  // onboarding via the web UI.
++  return listBundledChannelPlugins().find(pluginRegistersWebLogin) ?? null;
++};
+diff --git a/src/gateway/server-methods/web.ts b/src/gateway/server-methods/web.ts
+index d9128b4bdd..86d67a54dd 100644
+--- a/src/gateway/server-methods/web.ts
++++ b/src/gateway/server-methods/web.ts
+@@ -1,4 +1,3 @@
+-import { listChannelPlugins } from "../../channels/plugins/index.js";
+ import type { ChannelId } from "../../channels/plugins/types.public.js";
+ import {
+   ErrorCodes,
+@@ -9,13 +8,8 @@ import {
+ } from "../protocol/index.js";
+ import { formatForLog } from "../ws-log.js";
+ import type { GatewayRequestHandlers, RespondFn } from "./types.js";
+-
+-const WEB_LOGIN_METHODS = new Set(["web.login.start", "web.login.wait"]);
+-
+-const resolveWebLoginProvider = () =>
+-  listChannelPlugins().find((plugin) =>
+-    (plugin.gatewayMethods ?? []).some((method) => WEB_LOGIN_METHODS.has(method)),
+-  ) ?? null;
++// FireClaw fork extension — keep upstream-file delta minimal for rebases.
++import { resolveWebLoginProvider } from "./fireclaw-web-fallback.js";
+ 
+ function resolveAccountId(params: unknown): string | undefined {
+   return typeof (params as { accountId?: unknown }).accountId === "string"
+diff --git a/ui/src/styles.css b/ui/src/styles.css
+index 23fc6a55c8..73ec0db50c 100644
+--- a/ui/src/styles.css
++++ b/ui/src/styles.css
+@@ -8,6 +8,8 @@
+ @import "./styles/cron-quick-create.css";
+ @import "./styles/usage.css";
+ @import "./styles/dreams.css";
++/* FireClaw fork extension styles. Kept in a dedicated file so upstream rebases of layout.css do not collide with our patches. */
++@import "./styles/fireclaw.css";
+ @import "@create-markdown/preview/themes/system.css";
+ 
+ .cm-preview {
+diff --git a/ui/src/styles/fireclaw.css b/ui/src/styles/fireclaw.css
+new file mode 100644
+index 0000000000..3365b38d18
+--- /dev/null
++++ b/ui/src/styles/fireclaw.css
+@@ -0,0 +1,1046 @@
++/* FireClaw fork extension styles. Kept in a dedicated file so upstream rebases of layout.css do not collide with our patches. */
++
++.wa-dropdown-wrapper {
++  position: relative;
++  display: inline-flex;
++}
++
++.wa-dropdown-trigger {
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++  min-height: 38px;
++  padding: 0 12px 0 14px;
++  border: 1px solid color-mix(in srgb, #25D366 25%, var(--border));
++  border-radius: var(--radius-full);
++  background: color-mix(in srgb, #25D366 6%, var(--bg-elevated));
++  color: var(--text);
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
++}
++
++.wa-dropdown-trigger:hover {
++  background: color-mix(in srgb, #25D366 12%, var(--bg-elevated));
++  border-color: color-mix(in srgb, #25D366 50%, var(--border));
++  box-shadow: 0 2px 8px color-mix(in srgb, #25D366 15%, transparent);
++}
++
++.wa-dropdown-trigger--connected {
++  border-color: color-mix(in srgb, #25D366 40%, var(--border));
++}
++
++.wa-dropdown-trigger__dot {
++  position: relative;
++  width: 10px;
++  height: 10px;
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  flex-shrink: 0;
++}
++
++.wa-dot {
++  display: inline-block;
++  border-radius: 50%;
++}
++
++.wa-dot--connected {
++  position: relative;
++  width: 10px;
++  height: 10px;
++  background: #25D366;
++  border-radius: 50%;
++  box-shadow: 0 0 0 2px color-mix(in srgb, #25D366 20%, transparent);
++}
++
++.wa-dot--connected-ping {
++  position: absolute;
++  inset: 0;
++  width: 10px;
++  height: 10px;
++  border-radius: 50%;
++  background: #25D366;
++  opacity: 0.6;
++  animation: wa-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
++}
++
++.wa-dot--disconnected {
++  width: 10px;
++  height: 10px;
++  background: #f59e0b;
++  border-radius: 50%;
++  box-shadow: 0 0 0 2px color-mix(in srgb, #f59e0b 20%, transparent);
++}
++
++.wa-dot--web {
++  width: 10px;
++  height: 10px;
++  background: #3b82f6;
++  border-radius: 50%;
++  box-shadow: 0 0 0 2px color-mix(in srgb, #3b82f6 20%, transparent);
++}
++
++.wa-dot--telegram {
++  width: 10px;
++  height: 10px;
++  background: #0ea5e9;
++  border-radius: 50%;
++  box-shadow: 0 0 0 2px color-mix(in srgb, #0ea5e9 20%, transparent);
++}
++
++@keyframes wa-ping {
++  75%, 100% { transform: scale(2); opacity: 0; }
++}
++
++.wa-dropdown-trigger__icon { color: #25D366; flex-shrink: 0; }
++.wa-dropdown-trigger__label { letter-spacing: -0.01em; white-space: nowrap; }
++
++.wa-dropdown-trigger__count {
++  font-size: 11px;
++  font-weight: 500;
++  color: var(--text-muted);
++  background: var(--bg);
++  padding: 1px 6px;
++  border-radius: 10px;
++}
++
++.wa-dropdown-trigger__chevron {
++  flex-shrink: 0;
++  color: var(--text-muted);
++  transition: transform 200ms ease;
++}
++
++.wa-dropdown-trigger__chevron--open { transform: rotate(180deg); }
++
++/* Backdrop */
++.wa-dropdown-backdrop {
++  position: fixed;
++  inset: 0;
++  z-index: 9998;
++}
++
++/* Panel */
++.wa-dropdown-panel {
++  position: absolute;
++  top: calc(100% + 8px);
++  right: 0;
++  z-index: 9999;
++  width: 340px;
++  max-height: 480px;
++  overflow-y: auto;
++  background: var(--bg-elevated);
++  border: 1px solid var(--border);
++  border-radius: 12px;
++  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
++  padding: 4px 0;
++  animation: wa-dropdown-enter 180ms ease;
++}
++
++@keyframes wa-dropdown-enter {
++  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
++  to { opacity: 1; transform: translateY(0) scale(1); }
++}
++
++/* Header */
++.wa-dropdown-header {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 12px 16px 8px;
++}
++
++.wa-dropdown-header__title {
++  flex: 1;
++  font-size: 13px;
++  font-weight: 700;
++  color: var(--text);
++  letter-spacing: -0.01em;
++  text-transform: uppercase;
++}
++
++.wa-dropdown-close,
++.wa-dropdown-back {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  width: 26px;
++  height: 26px;
++  border: none;
++  border-radius: 6px;
++  background: transparent;
++  color: var(--text-muted);
++  font-size: 18px;
++  cursor: pointer;
++  transition: background 120ms ease;
++}
++
++.wa-dropdown-close:hover,
++.wa-dropdown-back:hover {
++  background: var(--bg);
++  color: var(--text);
++}
++
++/* Channel items */
++.wa-dropdown-item {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  padding: 10px 16px;
++  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
++  transition: background 120ms ease;
++}
++
++.wa-dropdown-item:hover {
++  background: color-mix(in srgb, var(--bg) 60%, transparent);
++}
++
++.wa-dropdown-item--live {
++  background: color-mix(in srgb, #25D366 4%, transparent);
++}
++
++.wa-dropdown-item__left {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++}
++
++.wa-dropdown-item__dot {
++  position: relative;
++  width: 10px;
++  height: 10px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  flex-shrink: 0;
++}
++
++.wa-dropdown-item__info {
++  display: flex;
++  flex-direction: column;
++  gap: 1px;
++}
++
++.wa-dropdown-item__name {
++  font-size: 13px;
++  font-weight: 600;
++  color: var(--text);
++}
++
++.wa-dropdown-item__detail {
++  font-size: 11px;
++  color: var(--text-muted);
++}
++
++.wa-dropdown-item__right {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++
++/* Badges */
++.wa-dropdown-badge {
++  display: inline-flex;
++  align-items: center;
++  gap: 4px;
++  padding: 3px 8px;
++  border-radius: 10px;
++  font-size: 11px;
++  font-weight: 600;
++}
++
++.wa-dropdown-badge--live {
++  background: color-mix(in srgb, #25D366 12%, transparent);
++  color: #25D366;
++}
++
++.wa-dropdown-badge--offline {
++  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
++  color: var(--text-muted);
++}
++
++/* Action buttons in rows */
++.wa-dropdown-action {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  padding: 4px 8px;
++  border: none;
++  border-radius: 6px;
++  background: transparent;
++  color: var(--text-muted);
++  font-size: 12px;
++  font-weight: 600;
++  cursor: pointer;
++  transition: background 120ms ease, color 120ms ease;
++}
++
++.wa-dropdown-action:hover {
++  background: var(--bg);
++  color: var(--text);
++}
++
++.wa-dropdown-action--connect {
++  background: color-mix(in srgb, #25D366 10%, transparent);
++  color: #25D366;
++  padding: 4px 12px;
++  border-radius: 10px;
++}
++
++.wa-dropdown-action--connect:hover {
++  background: color-mix(in srgb, #25D366 20%, transparent);
++}
++
++/* Status bar under channel */
++.wa-dropdown-statusbar {
++  display: flex;
++  gap: 12px;
++  padding: 4px 16px 8px 36px;
++  font-size: 11px;
++  color: var(--text-muted);
++}
++
++.wa-dropdown-statusbar--error {
++  color: #f59e0b;
++}
++
++.wa-dropdown-statusbar__item {
++  white-space: nowrap;
++}
++
++/* Footer */
++.wa-dropdown-footer {
++  padding: 8px 16px 10px;
++}
++
++.wa-dropdown-footer__link {
++  display: inline;
++  border: none;
++  background: transparent;
++  color: var(--text-muted);
++  font-size: 12px;
++  font-weight: 500;
++  cursor: pointer;
++  padding: 0;
++  transition: color 120ms ease;
++}
++
++.wa-dropdown-footer__link:hover {
++  color: var(--text);
++}
++
++/* Messages */
++.wa-dropdown-message {
++  font-size: 12px;
++  color: #f59e0b;
++  padding: 6px 16px 10px;
++  line-height: 1.4;
++}
++
++/* â”€â”€ QR View â”€â”€ */
++.wa-dropdown-qr-steps {
++  padding: 8px 16px 12px;
++}
++
++.wa-dropdown-qr-step {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  padding: 6px 0;
++  font-size: 13px;
++  color: var(--text);
++}
++
++.wa-dropdown-qr-step__num {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  width: 22px;
++  height: 22px;
++  border-radius: 50%;
++  background: color-mix(in srgb, #25D366 12%, transparent);
++  color: #25D366;
++  font-size: 12px;
++  font-weight: 700;
++  flex-shrink: 0;
++}
++
++.wa-dropdown-qr-img {
++  display: flex;
++  justify-content: center;
++  padding: 12px 16px;
++}
++
++.wa-dropdown-qr-img img {
++  background: #fff;
++  padding: 12px;
++  border-radius: 10px;
++  image-rendering: pixelated;
++}
++
++.wa-dropdown-qr-loading,
++.wa-dropdown-qr-waiting {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  padding: 16px;
++  font-size: 13px;
++  color: var(--text-muted);
++}
++
++.wa-dropdown-qr-success {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  gap: 8px;
++  padding: 24px 16px;
++  text-align: center;
++}
++
++.wa-dropdown-qr-success p {
++  font-size: 15px;
++  font-weight: 600;
++  color: #25D366;
++  margin: 0;
++}
++
++/* Spinner */
++.wa-qr-modal__spinner {
++  width: 16px;
++  height: 16px;
++  border: 2px solid var(--border);
++  border-top-color: #25D366;
++  border-radius: 50%;
++  animation: wa-spin 0.8s linear infinite;
++  flex-shrink: 0;
++}
++
++@keyframes wa-spin {
++  to { transform: rotate(360deg); }
++}
++
++/* â”€â”€ Settings View â”€â”€ */
++.wa-dropdown-settings-info {
++  padding: 8px 16px;
++}
++
++.wa-dropdown-settings-row {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  padding: 5px 0;
++  font-size: 12px;
++}
++
++.wa-dropdown-settings-row__label {
++  color: var(--text-muted);
++}
++
++.wa-dropdown-settings-row__value {
++  color: var(--text);
++  font-weight: 500;
++}
++
++.wa-dropdown-settings-actions {
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++  padding: 10px 16px 14px;
++}
++
++.wa-dropdown-settings-btn {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  padding: 8px 14px;
++  border: 1px solid var(--border);
++  border-radius: 8px;
++  background: transparent;
++  font-size: 13px;
++  font-weight: 500;
++  cursor: pointer;
++  transition: background 120ms ease, border-color 120ms ease;
++}
++
++.wa-dropdown-settings-btn:hover {
++  background: var(--bg);
++}
++
++.wa-dropdown-settings-btn--relink {
++  color: #25D366;
++  border-color: color-mix(in srgb, #25D366 30%, var(--border));
++}
++
++.wa-dropdown-settings-btn--relink:hover {
++  background: color-mix(in srgb, #25D366 8%, transparent);
++}
++
++.wa-dropdown-settings-btn--disconnect {
++  color: #ef4444;
++  border-color: color-mix(in srgb, #ef4444 20%, var(--border));
++}
++
++.wa-dropdown-settings-btn--disconnect:hover {
++  background: color-mix(in srgb, #ef4444 8%, transparent);
++}
++
++.wa-dropdown-settings-btn:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++.wa-dropdown-settings-section {
++  padding: 8px 12px;
++  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
++}
++
++.wa-dropdown-settings-section__title {
++  font-size: 10px;
++  font-weight: 600;
++  text-transform: uppercase;
++  letter-spacing: 0.05em;
++  color: var(--text-secondary, #888);
++  margin-bottom: 6px;
++  display: block;
++}
++
++.wa-dropdown-settings-select {
++  width: 100%;
++  padding: 5px 8px;
++  border-radius: 6px;
++  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
++  background: var(--bg-input, rgba(255, 255, 255, 0.04));
++  color: inherit;
++  font-size: 12px;
++  cursor: pointer;
++  outline: none;
++  margin-top: 2px;
++}
++
++.wa-dropdown-settings-select:focus {
++  border-color: var(--accent, #25D366);
++}
++
++.wa-dropdown-settings-allowform {
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++  margin-top: 8px;
++}
++
++.wa-dropdown-settings-input {
++  width: 100%;
++  padding: 5px 8px;
++  border-radius: 6px;
++  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
++  background: var(--bg-input, rgba(255, 255, 255, 0.04));
++  color: inherit;
++  font-size: 12px;
++  outline: none;
++  box-sizing: border-box;
++}
++
++.wa-dropdown-settings-input:focus {
++  border-color: var(--accent, #25D366);
++}
++
++.wa-dropdown-settings-input::placeholder {
++  color: var(--text-tertiary, #666);
++}
++
++.wa-dropdown-settings-btn--save {
++  background: var(--accent, #25D366);
++  color: #fff;
++  border-color: transparent;
++  font-weight: 500;
++}
++
++.wa-dropdown-settings-btn--save:hover {
++  background: color-mix(in srgb, var(--accent, #25D366) 85%, #000);
++}
++
++/* â”€â”€ API Key Button & Popover â”€â”€ */
++.api-key-wrapper {
++  position: relative;
++  display: inline-flex;
++}
++
++.api-key-btn {
++  position: relative;
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  width: 34px;
++  height: 34px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-full);
++  background: var(--bg-elevated);
++  color: var(--text-muted);
++  cursor: pointer;
++  transition: border-color var(--duration-fast) ease, color var(--duration-fast) ease, background var(--duration-fast) ease;
++}
++
++.api-key-btn--missing {
++  border-color: color-mix(in srgb, #f59e0b 40%, var(--border));
++  color: #f59e0b;
++}
++
++.api-key-btn--configured {
++  border-color: color-mix(in srgb, #22c55e 30%, var(--border));
++  color: #22c55e;
++}
++
++.api-key-btn__badge {
++  position: absolute;
++  top: -4px;
++  right: -4px;
++  width: 14px;
++  height: 14px;
++  border-radius: 50%;
++  background: #f59e0b;
++  color: #fff;
++  font-size: 9px;
++  font-weight: 700;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  line-height: 1;
++}
++
++.api-key-btn:hover {
++  border-color: var(--color-accent, #6366f1);
++  color: var(--color-accent, #6366f1);
++  background: color-mix(in srgb, var(--color-accent, #6366f1) 8%, var(--bg-elevated));
++}
++
++.api-key-btn[aria-expanded="true"] {
++  border-color: var(--color-accent, #6366f1);
++  color: var(--color-accent, #6366f1);
++}
++
++.api-key-popover {
++  position: fixed;
++  top: 60px;
++  right: 16px;
++  z-index: 1000;
++  width: 300px;
++  padding: 16px;
++  background: var(--bg-elevated);
++  border: 1px solid var(--border);
++  border-radius: var(--radius-md, 8px);
++  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
++}
++
++.api-key-popover__header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin-bottom: 4px;
++}
++
++.api-key-popover__title {
++  font-size: 14px;
++  font-weight: 600;
++  color: var(--text);
++}
++
++.api-key-popover__close {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  width: 24px;
++  height: 24px;
++  border: none;
++  border-radius: var(--radius-sm, 4px);
++  background: transparent;
++  color: var(--text-muted);
++  font-size: 18px;
++  cursor: pointer;
++}
++
++.api-key-popover__close:hover {
++  background: var(--bg);
++  color: var(--text);
++}
++
++.api-key-popover__status {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 8px 10px;
++  border-radius: var(--radius-sm, 4px);
++  font-size: 12px;
++  margin-bottom: 12px;
++  line-height: 1.4;
++}
++
++.api-key-popover__status--ok {
++  background: color-mix(in srgb, #22c55e 10%, var(--bg));
++  color: #22c55e;
++}
++
++.api-key-popover__status--missing {
++  background: color-mix(in srgb, #f59e0b 10%, var(--bg));
++  color: #f59e0b;
++}
++
++.api-key-popover__status-dot {
++  width: 6px;
++  height: 6px;
++  border-radius: 50%;
++  flex-shrink: 0;
++}
++
++.api-key-popover__status--ok .api-key-popover__status-dot {
++  background: #22c55e;
++}
++
++.api-key-popover__status--missing .api-key-popover__status-dot {
++  background: #f59e0b;
++}
++
++.api-key-popover__desc {
++  font-size: 12px;
++  color: var(--text-muted);
++  margin: 0 0 12px;
++  line-height: 1.4;
++}
++
++.api-key-popover__field {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++  margin-bottom: 10px;
++}
++
++.api-key-popover__label {
++  font-size: 12px;
++  font-weight: 500;
++  color: var(--text-muted);
++}
++
++.api-key-popover__field select,
++.api-key-popover__field input {
++  height: 34px;
++  padding: 0 10px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-sm, 4px);
++  background: var(--bg);
++  color: var(--text);
++  font-size: 13px;
++}
++
++.api-key-popover__field select:focus,
++.api-key-popover__field input:focus {
++  outline: none;
++  border-color: var(--color-accent, #6366f1);
++  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #6366f1) 20%, transparent);
++}
++
++.api-key-popover__msg {
++  font-size: 12px;
++  margin-bottom: 8px;
++  padding: 6px 8px;
++  border-radius: var(--radius-sm, 4px);
++}
++
++.api-key-popover__msg--error {
++  background: color-mix(in srgb, #ef4444 10%, var(--bg));
++  color: #ef4444;
++}
++
++.api-key-popover__msg--success {
++  background: color-mix(in srgb, #22c55e 10%, var(--bg));
++  color: #22c55e;
++}
++
++.api-key-popover__save {
++  width: 100%;
++  height: 34px;
++  border: none;
++  border-radius: var(--radius-sm, 4px);
++  background: var(--color-accent, #6366f1);
++  color: #fff;
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++  transition: opacity var(--duration-fast) ease;
++}
++
++.api-key-popover__save:hover:not(:disabled) {
++  opacity: 0.9;
++}
++
++.api-key-popover__save:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++/* â”€â”€ Multi-Provider Panel â”€â”€ */
++.api-key-popover--wide {
++  width: 380px;
++  max-height: 520px;
++  display: flex;
++  flex-direction: column;
++}
++
++.api-key-popover__back {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  width: 24px;
++  height: 24px;
++  border: none;
++  border-radius: var(--radius-sm, 4px);
++  background: transparent;
++  color: var(--text-muted);
++  font-size: 16px;
++  cursor: pointer;
++  margin-right: 4px;
++  padding: 0;
++}
++.api-key-popover__back:hover {
++  background: var(--bg);
++  color: var(--text);
++}
++
++/* Suggestion Banner */
++.api-key-suggestion {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 10px 12px;
++  border-radius: var(--radius-sm, 4px);
++  background: linear-gradient(135deg, color-mix(in srgb, #a855f7 12%, var(--bg)), color-mix(in srgb, #6366f1 8%, var(--bg)));
++  border: 1px solid color-mix(in srgb, #a855f7 20%, var(--border));
++  font-size: 12px;
++  color: var(--text);
++  margin-bottom: 12px;
++  line-height: 1.4;
++}
++.api-key-suggestion__icon {
++  font-size: 16px;
++  flex-shrink: 0;
++}
++
++/* Provider List */
++.api-key-provider-list {
++  display: flex;
++  flex-direction: column;
++  gap: 2px;
++  overflow-y: auto;
++  max-height: 400px;
++  margin: 0 -4px;
++  padding: 0 4px;
++}
++.api-key-provider-card {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  width: 100%;
++  padding: 10px 12px;
++  border: 1px solid transparent;
++  border-radius: var(--radius-sm, 4px);
++  background: transparent;
++  color: var(--text);
++  cursor: pointer;
++  text-align: left;
++  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
++}
++.api-key-provider-card:hover {
++  background: var(--bg);
++  border-color: var(--border);
++}
++.api-key-provider-card--configured {
++  border-color: color-mix(in srgb, #22c55e 20%, transparent);
++}
++.api-key-provider-card--configured:hover {
++  border-color: color-mix(in srgb, #22c55e 40%, var(--border));
++}
++.api-key-provider-card--recommended {
++  border-color: color-mix(in srgb, #a855f7 20%, transparent);
++}
++.api-key-provider-card--recommended:hover {
++  border-color: color-mix(in srgb, #a855f7 40%, var(--border));
++}
++.api-key-provider-card__info {
++  flex: 1;
++  min-width: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 2px;
++}
++.api-key-provider-card__name {
++  font-size: 13px;
++  font-weight: 600;
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++.api-key-provider-card__badge {
++  font-size: 10px;
++  color: #a855f7;
++}
++.api-key-provider-card__desc {
++  font-size: 11px;
++  color: var(--text-muted);
++  white-space: nowrap;
++  overflow: hidden;
++  text-overflow: ellipsis;
++}
++.api-key-provider-card__status {
++  flex-shrink: 0;
++  font-size: 14px;
++}
++.api-key-provider-card__check {
++  color: #22c55e;
++  font-weight: 700;
++}
++.api-key-provider-card__arrow {
++  color: var(--text-muted);
++}
++
++/* Configure View */
++.api-key-configure {
++  display: flex;
++  flex-direction: column;
++}
++.api-key-configure__key-row {
++  display: flex;
++  gap: 6px;
++}
++.api-key-configure__key-row input {
++  flex: 1;
++  min-width: 0;
++  height: 34px;
++  padding: 0 10px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-sm, 4px);
++  background: var(--bg);
++  color: var(--text);
++  font-size: 13px;
++}
++.api-key-configure__key-row input:focus {
++  outline: none;
++  border-color: var(--color-accent, #6366f1);
++  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #6366f1) 20%, transparent);
++}
++.api-key-configure__fetch-btn {
++  flex-shrink: 0;
++  height: 34px;
++  padding: 0 12px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-sm, 4px);
++  background: var(--bg);
++  color: var(--text);
++  font-size: 12px;
++  font-weight: 500;
++  cursor: pointer;
++  white-space: nowrap;
++  transition: border-color var(--duration-fast) ease, color var(--duration-fast) ease;
++}
++.api-key-configure__fetch-btn:hover:not(:disabled) {
++  border-color: var(--color-accent, #6366f1);
++  color: var(--color-accent, #6366f1);
++}
++.api-key-configure__fetch-btn:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++/* Models Loading */
++.api-key-models-loading {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 12px 0;
++  font-size: 12px;
++  color: var(--text-muted);
++}
++.api-key-models-loading__spinner {
++  width: 14px;
++  height: 14px;
++  border: 2px solid var(--border);
++  border-top-color: var(--color-accent, #6366f1);
++  border-radius: 50%;
++  animation: api-key-spin 0.6s linear infinite;
++}
++@keyframes api-key-spin {
++  to { transform: rotate(360deg); }
++}
++
++/* Model List */
++.api-key-models {
++  margin-top: 8px;
++}
++.api-key-models__header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin-bottom: 6px;
++}
++.api-key-models__title {
++  font-size: 12px;
++  font-weight: 600;
++  color: var(--text);
++}
++.api-key-models__hint {
++  font-size: 11px;
++  color: var(--text-muted);
++}
++.api-key-models__list {
++  display: flex;
++  flex-direction: column;
++  gap: 2px;
++  max-height: 200px;
++  overflow-y: auto;
++  margin-bottom: 10px;
++}
++.api-key-model-item {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  width: 100%;
++  padding: 7px 10px;
++  border: 1px solid transparent;
++  border-radius: var(--radius-sm, 4px);
++  background: transparent;
++  color: var(--text);
++  cursor: pointer;
++  text-align: left;
++  font-size: 12px;
++  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
++}
++.api-key-model-item:hover {
++  background: var(--bg);
++  border-color: var(--border);
++}
++.api-key-model-item--selected {
++  background: color-mix(in srgb, var(--color-accent, #6366f1) 10%, var(--bg));
++  border-color: color-mix(in srgb, var(--color-accent, #6366f1) 30%, var(--border));
++}
++.api-key-model-item__name {
++  flex: 1;
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++.api-key-model-item__ctx {
++  flex-shrink: 0;
++  font-size: 10px;
++  color: var(--text-muted);
++  padding: 1px 5px;
++  border-radius: 3px;
++  background: var(--bg);
++}
++.api-key-model-item__check {
++  flex-shrink: 0;
++  color: var(--color-accent, #6366f1);
++  font-weight: 700;
++  font-size: 13px;
++}
++
+diff --git a/ui/src/ui/app-render.helpers.ts b/ui/src/ui/app-render.helpers.ts
+index 529c92b0ad..da7d6a17da 100644
+--- a/ui/src/ui/app-render.helpers.ts
++++ b/ui/src/ui/app-render.helpers.ts
+@@ -14,6 +14,8 @@ import {
+ import { refreshSlashCommands } from "./chat/slash-commands.ts";
+ import { resolveControlUiAuthToken } from "./control-ui-auth.ts";
+ import { ChatState, loadChatHistory } from "./controllers/chat.ts";
++// FireClaw fork extension Ã¢â‚¬â€ keep upstream-file delta minimal for rebases.
++import { filterChatModelsForConfiguredProviders, renderApiKeyButton } from "./fireclaw/api-key-ui.ts";
+ import { loadSessions } from "./controllers/sessions.ts";
+ import { icons } from "./icons.ts";
+ import { iconForTab, pathForTab, titleForTab, type Tab } from "./navigation.ts";
+@@ -171,7 +173,8 @@ function renderCronFilterIcon(hiddenCount: number) {
+ }
+ 
+ export function renderChatSessionSelect(state: AppViewState) {
+-  return renderChatSessionSelectBase(state, switchChatSession);
++  // FireClaw fork extension — filter chat-model catalog to configured providers and append API key button.
++  return html`${renderChatSessionSelectBase(filterChatModelsForConfiguredProviders(state), switchChatSession)}${renderApiKeyButton(state)}`;
+ }
+ 
+ export function renderChatControls(state: AppViewState) {
+diff --git a/ui/src/ui/app-render.ts b/ui/src/ui/app-render.ts
+index 7a00ebd53c..92dca91075 100644
+--- a/ui/src/ui/app-render.ts
++++ b/ui/src/ui/app-render.ts
+@@ -22,6 +22,8 @@ import {
+ } from "./app-render.helpers.ts";
+ import { warnQueryToken } from "./app-settings.ts";
+ import type { AppViewState } from "./app-view-state.ts";
++// FireClaw fork extension — keep upstream-file delta minimal for rebases.
++import { renderTopbarWhatsAppButton } from "./fireclaw/whatsapp-topbar.ts";
+ import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
+ import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
+ import { loadAgentSkills } from "./controllers/agent-skills.ts";
+@@ -152,7 +154,7 @@ import { renderGatewayUrlConfirmation } from "./views/gateway-url-confirmation.t
+ import { renderLoginGate } from "./views/login-gate.ts";
+ import { renderOverview } from "./views/overview.ts";
+ 
+-// Lazy-loaded view modules – deferred so the initial bundle stays small.
++// Lazy-loaded view modules â€“ deferred so the initial bundle stays small.
+ // Each loader resolves once; subsequent calls return the cached module.
+ type LazyState<T> = { mod: T | null; promise: Promise<T> | null };
+ 
+@@ -1254,12 +1256,13 @@ export function renderApp(state: AppViewState) {
+               @click=${() => {
+                 state.paletteOpen = !state.paletteOpen;
+               }}
+-              title="Search or jump to… (⌘K)"
++              title="Search or jump toâ€¦ (âŒ˜K)"
+               aria-label="Open command palette"
+             >
+               <span class="topbar-search__label">${t("common.search")}</span>
+-              <kbd class="topbar-search__kbd">⌘K</kbd>
++              <kbd class="topbar-search__kbd">âŒ˜K</kbd>
+             </button>
++            ${renderTopbarWhatsAppButton(state)}
+             <div class="topbar-status">
+               ${isChat ? renderChatMobileToggle(state) : nothing}
+               ${renderTopbarThemeModeToggle(state)}
+@@ -1393,7 +1396,7 @@ export function renderApp(state: AppViewState) {
+                 ?disabled=${state.updateRunning || !state.connected}
+                 @click=${() => runUpdate(state)}
+               >
+-                ${state.updateRunning ? "Updating…" : "Update now"}
++                ${state.updateRunning ? "Updatingâ€¦" : "Update now"}
+               </button>
+               <button
+                 class="update-banner__close"
+diff --git a/ui/src/ui/app-view-state.ts b/ui/src/ui/app-view-state.ts
+index 0a2f5d5479..6f93269117 100644
+--- a/ui/src/ui/app-view-state.ts
++++ b/ui/src/ui/app-view-state.ts
+@@ -183,8 +183,19 @@ export type AppViewState = {
+   whatsappLoginQrDataUrl: string | null;
+   whatsappLoginConnected: boolean | null;
+   whatsappBusy: boolean;
++  whatsappDropdownOpen: boolean;
++  whatsappDropdownView: "status" | "qr" | "settings";
+   nostrProfileFormState: NostrProfileFormState | null;
+   nostrProfileAccountId: string | null;
++  apiKeyPopoverOpen: boolean;
++  apiKeyProvider: string;
++  apiKeyValue: string;
++  apiKeySaving: boolean;
++  apiKeyError: string | null;
++  apiKeySuccess: string | null;
++  apiKeyFetchedModels: import("./controllers/provider-registry.js").ProviderModel[];
++  apiKeySelectedModel: string | null;
++  apiKeyView: "providers" | "configure";
+   configFormDirty: boolean;
+   presenceLoading: boolean;
+   presenceEntries: PresenceEntry[];
+diff --git a/ui/src/ui/app.ts b/ui/src/ui/app.ts
+index ca05a641be..d6d89bd8de 100644
+--- a/ui/src/ui/app.ts
++++ b/ui/src/ui/app.ts
+@@ -289,9 +289,21 @@ export class OpenClawApp extends LitElement {
+   @state() whatsappLoginQrDataUrl: string | null = null;
+   @state() whatsappLoginConnected: boolean | null = null;
+   @state() whatsappBusy = false;
++  @state() whatsappDropdownOpen = false;
++  @state() whatsappDropdownView: "status" | "qr" | "settings" = "status";
+   @state() nostrProfileFormState: NostrProfileFormState | null = null;
+   @state() nostrProfileAccountId: string | null = null;
+ 
++  @state() apiKeyPopoverOpen = false;
++  @state() apiKeyProvider = "openai";
++  @state() apiKeyValue = "";
++  @state() apiKeySaving = false;
++  @state() apiKeyError: string | null = null;
++  @state() apiKeySuccess: string | null = null;
++  @state() apiKeyFetchedModels: import("./controllers/provider-registry.js").ProviderModel[] = [];
++  @state() apiKeySelectedModel: string | null = null;
++  @state() apiKeyView: "providers" | "configure" = "providers";
++
+   @state() presenceLoading = false;
+   @state() presenceEntries: PresenceEntry[] = [];
+   @state() presenceError: string | null = null;
+diff --git a/ui/src/ui/controllers/api-key.ts b/ui/src/ui/controllers/api-key.ts
+new file mode 100644
+index 0000000000..78193222d4
+--- /dev/null
++++ b/ui/src/ui/controllers/api-key.ts
+@@ -0,0 +1,221 @@
++import type { GatewayBrowserClient } from "../gateway.ts";
++import type { ConfigSnapshot, ModelCatalogEntry } from "../types.ts";
++import { loadModels } from "./models.ts";
++import { type ProviderModel, getProvider, PROVIDER_REGISTRY } from "./provider-registry.ts";
++
++export type ApiKeyState = {
++  client: GatewayBrowserClient | null;
++  connected: boolean;
++  configSnapshot: ConfigSnapshot | null;
++  apiKeyPopoverOpen: boolean;
++  apiKeyProvider: string;
++  apiKeyValue: string;
++  apiKeySaving: boolean;
++  apiKeyError: string | null;
++  apiKeySuccess: string | null;
++  apiKeyFetchedModels: ProviderModel[];
++  apiKeySelectedModel: string | null;
++  apiKeyView: "providers" | "configure";
++  configLoading: boolean;
++  chatModelCatalog: ModelCatalogEntry[];
++  chatModelsLoading: boolean;
++  sessionKey: string;
++};
++
++export async function ensureConfigLoaded(state: ApiKeyState) {
++  if (state.configSnapshot || !state.client || !state.connected) {
++    return;
++  }
++  state.configLoading = true;
++  try {
++    const res = await state.client.request<ConfigSnapshot>("config.get", {});
++    state.configSnapshot = res;
++  } catch {
++    // config load failed, will show error on save
++  } finally {
++    state.configLoading = false;
++  }
++}
++
++/**
++ * Save the API key WITH the curated model catalog into gateway config.
++ * No CORS issues — we write the models directly, gateway uses them immediately.
++ *
++ * Flow:
++ * 1. Write apiKey + baseUrl + api + models[] into config.patch
++ * 2. Gateway restarts and sees the provider + models
++ * 3. Show curated models instantly for user to pick a default
++ * 4. Set selected model as agents.defaults.model
++ */
++export async function saveApiKeyAndDetectModels(state: ApiKeyState) {
++  if (!state.client || !state.connected) {
++    state.apiKeyError = "Not connected to gateway";
++    return;
++  }
++  const providerId = state.apiKeyProvider.trim();
++  const apiKey = state.apiKeyValue.trim();
++  if (!providerId) {
++    state.apiKeyError = "Select a provider";
++    return;
++  }
++  if (!apiKey) {
++    state.apiKeyError = "Enter an API key";
++    return;
++  }
++
++  if (!state.configSnapshot) {
++    await ensureConfigLoaded(state);
++  }
++  const baseHash = state.configSnapshot?.hash;
++  if (!baseHash) {
++    state.apiKeyError = "Config not loaded. Try again.";
++    return;
++  }
++
++  const provider = getProvider(providerId);
++  if (!provider) {
++    state.apiKeyError = "Unknown provider";
++    return;
++  }
++
++  state.apiKeySaving = true;
++  state.apiKeyError = null;
++  state.apiKeySuccess = null;
++  state.apiKeyFetchedModels = [];
++  state.apiKeySelectedModel = null;
++
++  try {
++    // Build full provider config with curated models
++    const providerConfig: Record<string, unknown> = {
++      apiKey,
++      baseUrl: provider.baseUrl,
++      api: provider.api,
++      models: provider.models,
++    };
++
++    // Set the default model for this provider
++    const defaultModelId = provider.defaultModel ?? provider.models[0]?.id;
++    const defaultModelRef = defaultModelId ? `${providerId}/${defaultModelId}` : undefined;
++
++    const patchObj: Record<string, unknown> = {
++      models: { providers: { [providerId]: providerConfig } },
++    };
++
++    // Also set as default agent model (write to model.primary to preserve fallbacks)
++    if (defaultModelRef) {
++      patchObj.agents = { defaults: { model: { primary: defaultModelRef } } };
++    }
++
++    const patch = JSON.stringify(patchObj);
++    await state.client.request("config.patch", { raw: patch, baseHash });
++
++    // Reload config
++    const configRes = await state.client.request<ConfigSnapshot>("config.get", {});
++    state.configSnapshot = configRes;
++
++    // Show curated models instantly (no waiting for gateway restart)
++    const curatedModels: ProviderModel[] = provider.models.map((m) => ({
++      id: `${providerId}/${m.id}`,
++      name: m.name,
++      contextWindow: m.contextWindow,
++      owned_by: providerId,
++    }));
++
++    state.apiKeyFetchedModels = curatedModels;
++    state.apiKeySelectedModel = defaultModelRef ?? curatedModels[0]?.id ?? null;
++    state.apiKeyValue = "";
++    state.apiKeySuccess = `Saved! ${curatedModels.length} model${curatedModels.length !== 1 ? "s" : ""} available · default: ${provider.models.find((m) => `${providerId}/${m.id}` === state.apiKeySelectedModel)?.name ?? defaultModelId}`;
++
++    // Refresh the main chat model dropdown so user sees models everywhere
++    refreshChatModelCatalog(state).catch(() => {});
++
++    // Update current session to use the new default model
++    if (defaultModelRef && state.sessionKey) {
++      state.client.request("sessions.patch", {
++        key: state.sessionKey,
++        model: defaultModelRef,
++      }).catch(() => {});
++    }
++  } catch (err) {
++    state.apiKeyError = String(err);
++  } finally {
++    state.apiKeySaving = false;
++  }
++}
++
++/** Refresh the chat model dropdown from the gateway. */
++async function refreshChatModelCatalog(state: ApiKeyState) {
++  if (!state.client || !state.connected) {return;}
++  state.chatModelsLoading = true;
++  try {
++    state.chatModelCatalog = await loadModels(state.client);
++  } finally {
++    state.chatModelsLoading = false;
++  }
++}
++
++/** Set the selected model as the default agent model. */
++export async function setDefaultModel(state: ApiKeyState) {
++  if (!state.client || !state.connected || !state.apiKeySelectedModel) {return;}
++
++  if (!state.configSnapshot) {
++    await ensureConfigLoaded(state);
++  }
++  const baseHash = state.configSnapshot?.hash;
++  if (!baseHash) {return;}
++
++  state.apiKeySaving = true;
++  state.apiKeyError = null;
++  try {
++    const patch = JSON.stringify({
++      agents: { defaults: { model: { primary: state.apiKeySelectedModel } } },
++    });
++    await state.client.request("config.patch", { raw: patch, baseHash });
++    const configRes = await state.client.request<ConfigSnapshot>("config.get", {});
++    state.configSnapshot = configRes;
++    state.apiKeySuccess = `Default model: ${state.apiKeySelectedModel}`;
++
++    // Update current session to use this model
++    if (state.sessionKey) {
++      await state.client.request("sessions.patch", {
++        key: state.sessionKey,
++        model: state.apiKeySelectedModel,
++      });
++    }
++
++    // Refresh the main chat model dropdown
++    await refreshChatModelCatalog(state);
++  } catch (err) {
++    state.apiKeyError = String(err);
++  } finally {
++    state.apiKeySaving = false;
++  }
++}
++
++/** Check which providers already have keys configured in the config snapshot. */
++export function getConfiguredProviders(state: ApiKeyState): Set<string> {
++  const configured = new Set<string>();
++  const config = state.configSnapshot?.config as Record<string, unknown> | undefined;
++  if (!config?.models || typeof config.models !== "object") {return configured;}
++  const models = config.models as Record<string, unknown>;
++
++  const providers = (models.providers as Record<string, unknown>) ?? {};
++  for (const [key, val] of Object.entries(providers)) {
++    if (val && typeof val === "object") {
++      const p = val as Record<string, unknown>;
++      if (p.apiKey || p.auth) {
++        configured.add(key);
++      }
++    }
++  }
++  // Also check old flat format for backward compat
++  for (const pid of PROVIDER_REGISTRY.map((p) => p.id)) {
++    if (models[pid] && typeof models[pid] === "object") {
++      const p = models[pid] as Record<string, unknown>;
++      if (p.apiKey || p.auth) {
++        configured.add(pid);
++      }
++    }
++  }
++  return configured;
++}
+diff --git a/ui/src/ui/controllers/provider-registry.ts b/ui/src/ui/controllers/provider-registry.ts
+new file mode 100644
+index 0000000000..184d201f11
+--- /dev/null
++++ b/ui/src/ui/controllers/provider-registry.ts
+@@ -0,0 +1,284 @@
++/**
++ * Provider registry — metadata + curated model catalogs for all supported AI providers.
++ *
++ * Each provider includes a `models` array with the exact fields the gateway
++ * config schema requires (ModelDefinitionConfig).  When a user saves an API key,
++ * these models are written into the config so the gateway can use them immediately.
++ */
++
++export type ProviderModelDef = {
++  id: string;
++  name: string;
++  reasoning: boolean;
++  input: Array<"text" | "image">;
++  contextWindow: number;
++  maxTokens: number;
++  cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
++};
++
++export type ProviderInfo = {
++  id: string;
++  label: string;
++  description: string;
++  baseUrl: string;
++  /** OpenAI-compatible API type for OpenClaw config */
++  api: string;
++  placeholder: string;
++  /** If true, show a "recommended" badge */
++  recommended?: boolean;
++  /** Suggestion text shown below the provider */
++  suggestion?: string;
++  /** Curated model catalog written into gateway config on key save */
++  models: ProviderModelDef[];
++  /** Default model ID (first model used if not specified) */
++  defaultModel?: string;
++};
++
++// Re-export for backward compat
++export type ProviderModel = {
++  id: string;
++  name: string;
++  created?: number;
++  contextWindow?: number;
++  owned_by?: string;
++};
++
++// ── Provider Registry ───────────────────────────────────────────────
++
++export const PROVIDER_REGISTRY: ProviderInfo[] = [
++  // ── OpenAI ──
++  {
++    id: "openai",
++    label: "OpenAI",
++    description: "GPT-5.4, GPT-5.4 Mini, o3, o4-mini",
++    baseUrl: "https://api.openai.com/v1",
++    api: "openai-responses",
++    placeholder: "sk-...",
++    defaultModel: "gpt-5.4",
++    models: [
++      { id: "gpt-5.4", name: "GPT-5.4", reasoning: true, input: ["text", "image"], contextWindow: 1050000, maxTokens: 128000, cost: { input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 0 } },
++      { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", reasoning: true, input: ["text", "image"], contextWindow: 400000, maxTokens: 128000, cost: { input: 0.75, output: 4.5, cacheRead: 0.075, cacheWrite: 0 } },
++      { id: "gpt-5.4-nano", name: "GPT-5.4 Nano", reasoning: true, input: ["text", "image"], contextWindow: 400000, maxTokens: 128000, cost: { input: 0.2, output: 1.25, cacheRead: 0.02, cacheWrite: 0 } },
++    ],
++  },
++  // ── Anthropic ──
++  {
++    id: "anthropic",
++    label: "Anthropic",
++    description: "Claude Opus 4.6, Sonnet 4.6, Haiku",
++    baseUrl: "https://api.anthropic.com",
++    api: "anthropic-messages",
++    placeholder: "sk-ant-...",
++    defaultModel: "claude-sonnet-4-6",
++    models: [
++      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", reasoning: true, input: ["text", "image"], contextWindow: 1000000, maxTokens: 128000, cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 } },
++      { id: "claude-opus-4-6", name: "Claude Opus 4.6", reasoning: true, input: ["text", "image"], contextWindow: 1000000, maxTokens: 128000, cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 } },
++      { id: "claude-haiku-4-5", name: "Claude Haiku 4.5", reasoning: false, input: ["text", "image"], contextWindow: 200000, maxTokens: 8192, cost: { input: 0.8, output: 4, cacheRead: 0.08, cacheWrite: 1 } },
++    ],
++  },
++  // ── Google ──
++  {
++    id: "google",
++    label: "Google Gemini",
++    description: "Gemini 2.5 Pro, Flash, 3.1 Pro",
++    baseUrl: "https://generativelanguage.googleapis.com/v1beta",
++    api: "google-generative-ai",
++    placeholder: "AI...",
++    defaultModel: "gemini-2.5-pro",
++    models: [
++      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", reasoning: true, input: ["text", "image"], contextWindow: 1048576, maxTokens: 65536, cost: { input: 1.25, output: 10, cacheRead: 0.315, cacheWrite: 0 } },
++      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", reasoning: true, input: ["text", "image"], contextWindow: 1048576, maxTokens: 65536, cost: { input: 0.15, output: 0.6, cacheRead: 0.0375, cacheWrite: 0 } },
++      { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", reasoning: false, input: ["text", "image"], contextWindow: 1048576, maxTokens: 65536, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── Groq ──
++  {
++    id: "groq",
++    label: "Groq",
++    description: "Ultra-fast inference — Llama, Mixtral",
++    baseUrl: "https://api.groq.com/openai/v1",
++    api: "openai-completions",
++    placeholder: "gsk_...",
++    defaultModel: "llama-3.3-70b-versatile",
++    models: [
++      { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 32768, cost: { input: 0.59, output: 0.79, cacheRead: 0, cacheWrite: 0 } },
++      { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0.05, output: 0.08, cacheRead: 0, cacheWrite: 0 } },
++      { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B", reasoning: false, input: ["text"], contextWindow: 32768, maxTokens: 8192, cost: { input: 0.24, output: 0.24, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── Mistral ──
++  {
++    id: "mistral",
++    label: "Mistral",
++    description: "Mistral Large, Codestral, Magistral",
++    baseUrl: "https://api.mistral.ai/v1",
++    api: "openai-completions",
++    placeholder: "...",
++    defaultModel: "mistral-large-latest",
++    models: [
++      { id: "mistral-large-latest", name: "Mistral Large", reasoning: false, input: ["text", "image"], contextWindow: 262144, maxTokens: 16384, cost: { input: 0.5, output: 1.5, cacheRead: 0, cacheWrite: 0 } },
++      { id: "codestral-latest", name: "Codestral", reasoning: false, input: ["text"], contextWindow: 256000, maxTokens: 4096, cost: { input: 0.3, output: 0.9, cacheRead: 0, cacheWrite: 0 } },
++      { id: "magistral-small", name: "Magistral Small", reasoning: true, input: ["text"], contextWindow: 128000, maxTokens: 40000, cost: { input: 0.5, output: 1.5, cacheRead: 0, cacheWrite: 0 } },
++      { id: "mistral-small-latest", name: "Mistral Small", reasoning: true, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384, cost: { input: 0.1, output: 0.3, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── OpenRouter ──
++  {
++    id: "openrouter",
++    label: "OpenRouter",
++    description: "Access 200+ models from one key",
++    baseUrl: "https://openrouter.ai/api/v1",
++    api: "openai-completions",
++    placeholder: "sk-or-...",
++    defaultModel: "auto",
++    models: [
++      { id: "auto", name: "OpenRouter Auto", reasoning: false, input: ["text", "image"], contextWindow: 200000, maxTokens: 8192, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── DeepSeek ──
++  {
++    id: "deepseek",
++    label: "DeepSeek",
++    description: "DeepSeek Chat, R1 Reasoning",
++    baseUrl: "https://api.deepseek.com",
++    api: "openai-completions",
++    placeholder: "sk-...",
++    defaultModel: "deepseek-chat",
++    models: [
++      { id: "deepseek-chat", name: "DeepSeek Chat", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0.28, output: 0.42, cacheRead: 0.028, cacheWrite: 0 } },
++      { id: "deepseek-reasoner", name: "DeepSeek Reasoner", reasoning: true, input: ["text"], contextWindow: 131072, maxTokens: 65536, cost: { input: 0.28, output: 0.42, cacheRead: 0.028, cacheWrite: 0 } },
++    ],
++  },
++  // ── Together AI ──
++  {
++    id: "together",
++    label: "Together AI",
++    description: "Llama, Kimi K2.5, DeepSeek, GLM",
++    baseUrl: "https://api.together.xyz/v1",
++    api: "openai-completions",
++    placeholder: "...",
++    defaultModel: "moonshotai/Kimi-K2.5",
++    models: [
++      { id: "moonshotai/Kimi-K2.5", name: "Kimi K2.5", reasoning: true, input: ["text", "image"], contextWindow: 262144, maxTokens: 32768, cost: { input: 0.5, output: 2.8, cacheRead: 0.5, cacheWrite: 2.8 } },
++      { id: "meta-llama/Llama-3.3-70B-Instruct-Turbo", name: "Llama 3.3 70B Turbo", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0.88, output: 0.88, cacheRead: 0.88, cacheWrite: 0.88 } },
++      { id: "deepseek-ai/DeepSeek-V3.1", name: "DeepSeek V3.1", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0.6, output: 1.25, cacheRead: 0.6, cacheWrite: 0.6 } },
++      { id: "deepseek-ai/DeepSeek-R1", name: "DeepSeek R1", reasoning: true, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 3, output: 7, cacheRead: 3, cacheWrite: 3 } },
++    ],
++  },
++  // ── Fireworks ──
++  {
++    id: "fireworks",
++    label: "Fireworks AI",
++    description: "Fast inference — Kimi K2.5 Turbo",
++    baseUrl: "https://api.fireworks.ai/inference/v1",
++    api: "openai-completions",
++    placeholder: "...",
++    defaultModel: "accounts/fireworks/routers/kimi-k2p5-turbo",
++    models: [
++      { id: "accounts/fireworks/routers/kimi-k2p5-turbo", name: "Kimi K2.5 Turbo (Fire Pass)", reasoning: false, input: ["text", "image"], contextWindow: 256000, maxTokens: 256000, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── Perplexity ──
++  {
++    id: "perplexity",
++    label: "Perplexity",
++    description: "Sonar — search-augmented AI",
++    baseUrl: "https://api.perplexity.ai",
++    api: "openai-completions",
++    placeholder: "pplx-...",
++    defaultModel: "sonar-pro",
++    models: [
++      { id: "sonar-pro", name: "Sonar Pro", reasoning: false, input: ["text"], contextWindow: 200000, maxTokens: 8192, cost: { input: 3, output: 15, cacheRead: 0, cacheWrite: 0 } },
++      { id: "sonar", name: "Sonar", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 8192, cost: { input: 1, output: 5, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── Cohere ──
++  {
++    id: "cohere",
++    label: "Cohere",
++    description: "Command R+, Embed, Rerank",
++    baseUrl: "https://api.cohere.com/v2",
++    api: "openai-completions",
++    placeholder: "...",
++    defaultModel: "command-r-plus",
++    models: [
++      { id: "command-r-plus", name: "Command R+", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 4096, cost: { input: 2.5, output: 10, cacheRead: 0, cacheWrite: 0 } },
++      { id: "command-r", name: "Command R", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 4096, cost: { input: 0.15, output: 0.6, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── xAI (Grok) ──
++  {
++    id: "xai",
++    label: "xAI (Grok)",
++    description: "Grok 4, Grok 4 Fast, Grok 3",
++    baseUrl: "https://api.x.ai/v1",
++    api: "openai-responses",
++    placeholder: "xai-...",
++    defaultModel: "grok-4",
++    models: [
++      { id: "grok-4", name: "Grok 4", reasoning: true, input: ["text"], contextWindow: 256000, maxTokens: 64000, cost: { input: 3, output: 15, cacheRead: 0.75, cacheWrite: 0 } },
++      { id: "grok-4-fast", name: "Grok 4 Fast", reasoning: true, input: ["text", "image"], contextWindow: 2000000, maxTokens: 30000, cost: { input: 0.2, output: 0.5, cacheRead: 0.05, cacheWrite: 0 } },
++      { id: "grok-3-mini", name: "Grok 3 Mini", reasoning: true, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0.3, output: 0.5, cacheRead: 0.075, cacheWrite: 0 } },
++    ],
++  },
++  // ── MiniMax ──
++  {
++    id: "minimax",
++    label: "MiniMax",
++    description: "MiniMax M2.7 — powerful & affordable",
++    baseUrl: "https://api.minimax.io/anthropic",
++    api: "anthropic-messages",
++    placeholder: "...",
++    recommended: true,
++    suggestion: "Try MiniMax — powerful models at affordable pricing",
++    defaultModel: "MiniMax-M2.7",
++    models: [
++      { id: "MiniMax-M2.7", name: "MiniMax M2.7", reasoning: true, input: ["text", "image"], contextWindow: 204800, maxTokens: 131072, cost: { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0.375 } },
++      { id: "MiniMax-M2.7-highspeed", name: "MiniMax M2.7 Highspeed", reasoning: true, input: ["text", "image"], contextWindow: 204800, maxTokens: 131072, cost: { input: 0.6, output: 2.4, cacheRead: 0.06, cacheWrite: 0.375 } },
++    ],
++  },
++  // ── Cerebras ──
++  {
++    id: "cerebras",
++    label: "Cerebras",
++    description: "Ultra-fast wafer-scale inference",
++    baseUrl: "https://api.cerebras.ai/v1",
++    api: "openai-completions",
++    placeholder: "csk-...",
++    defaultModel: "llama-3.3-70b",
++    models: [
++      { id: "llama-3.3-70b", name: "Llama 3.3 70B", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0.85, output: 1.2, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── SambaNova ──
++  {
++    id: "sambanova",
++    label: "SambaNova",
++    description: "Fast open-source model inference",
++    baseUrl: "https://api.sambanova.ai/v1",
++    api: "openai-completions",
++    placeholder: "...",
++    defaultModel: "Meta-Llama-3.3-70B-Instruct",
++    models: [
++      { id: "Meta-Llama-3.3-70B-Instruct", name: "Llama 3.3 70B Instruct", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 8192, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++  // ── Qwen ──
++  {
++    id: "qwen",
++    label: "Qwen (Alibaba)",
++    description: "Qwen 3.5 Plus, 3.6 Plus",
++    baseUrl: "https://coding-intl.dashscope.aliyuncs.com/v1",
++    api: "openai-completions",
++    placeholder: "sk-...",
++    defaultModel: "qwen3.5-plus",
++    models: [
++      { id: "qwen3.5-plus", name: "Qwen 3.5 Plus", reasoning: false, input: ["text", "image"], contextWindow: 1000000, maxTokens: 65536, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
++      { id: "qwen3.6-plus", name: "Qwen 3.6 Plus", reasoning: false, input: ["text", "image"], contextWindow: 1000000, maxTokens: 65536, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
++    ],
++  },
++];
++
++export function getProvider(id: string): ProviderInfo | undefined {
++  return PROVIDER_REGISTRY.find((p) => p.id === id);
++}
+diff --git a/ui/src/ui/fireclaw/api-key-ui.ts b/ui/src/ui/fireclaw/api-key-ui.ts
+new file mode 100644
+index 0000000000..f0188df69c
+--- /dev/null
++++ b/ui/src/ui/fireclaw/api-key-ui.ts
+@@ -0,0 +1,240 @@
++// FireClaw fork extension — multi-provider API key configuration UI.
++// Kept in a dedicated file so upstream rebases do not collide with our patches.
++// Only touchpoint upstream: a single import + 1-line render hook in app-render.helpers.ts.
++
++import { html, nothing } from "lit";
++import type { AppViewState } from "../app-view-state.ts";
++import {
++  ensureConfigLoaded,
++  getConfiguredProviders,
++  saveApiKeyAndDetectModels,
++  setDefaultModel,
++} from "../controllers/api-key.ts";
++import { PROVIDER_REGISTRY } from "../controllers/provider-registry.ts";
++
++/** Filter the chat-model catalog down to providers that the user has configured. */
++export function filterChatModelsForConfiguredProviders(state: AppViewState): AppViewState {
++  const configured = getConfiguredProviders(state);
++  if (configured.size === 0) {return state;}
++  return {
++    ...state,
++    chatModelCatalog: state.chatModelCatalog.filter((m) => configured.has(m.provider)),
++  };
++}
++
++function hasApiKeyConfigured(state: AppViewState): boolean {
++  return getConfiguredProviders(state).size > 0;
++}
++
++export function renderApiKeyButton(state: AppViewState) {
++  const hasKey = hasApiKeyConfigured(state);
++  const modelCount = state.chatModelCatalog?.length ?? 0;
++  const togglePopover = async () => {
++    state.apiKeyPopoverOpen = !state.apiKeyPopoverOpen;
++    state.apiKeyError = null;
++    state.apiKeySuccess = null;
++    if (state.apiKeyPopoverOpen) {
++      state.apiKeyView = "providers";
++      await ensureConfigLoaded(state);
++    }
++  };
++  return html`
++    <div class="api-key-wrapper">
++      <button
++        class="api-key-btn ${hasKey ? "api-key-btn--configured" : "api-key-btn--missing"}"
++        @click=${togglePopover}
++        title="${hasKey ? `AI configured (${modelCount} models)` : "Add AI API Key"}"
++        aria-label="${hasKey ? "AI API Key configured" : "Add AI API Key"}"
++        aria-expanded=${state.apiKeyPopoverOpen}
++      >
++        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
++          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
++        </svg>
++        ${!hasKey ? html`<span class="api-key-btn__badge">!</span>` : nothing}
++      </button>
++    </div>
++    ${state.apiKeyPopoverOpen ? renderApiKeyPanel(state) : nothing}
++  `;
++}
++
++function renderApiKeyPanel(state: AppViewState) {
++  const handleKeyDown = (e: KeyboardEvent) => {
++    if (e.key === "Escape") {
++      if (state.apiKeyView === "configure") {
++        state.apiKeyView = "providers";
++        state.apiKeyValue = "";
++        state.apiKeyFetchedModels = [];
++        state.apiKeySelectedModel = null;
++        state.apiKeyError = null;
++        state.apiKeySuccess = null;
++      } else {
++        state.apiKeyPopoverOpen = false;
++      }
++    }
++  };
++  return html`
++    <div class="api-key-popover api-key-popover--wide" @keydown=${handleKeyDown}>
++      <div class="api-key-popover__header">
++        <span class="api-key-popover__title">
++          ${state.apiKeyView === "configure"
++            ? html`<button class="api-key-popover__back" @click=${() => {
++                state.apiKeyView = "providers";
++                state.apiKeyValue = "";
++                state.apiKeyFetchedModels = [];
++                state.apiKeySelectedModel = null;
++                state.apiKeyError = null;
++                state.apiKeySuccess = null;
++              }} aria-label="Back">←</button> ${PROVIDER_REGISTRY.find((p) => p.id === state.apiKeyProvider)?.label ?? state.apiKeyProvider}`
++            : "AI Providers"}
++        </span>
++        <button class="api-key-popover__close" @click=${() => { state.apiKeyPopoverOpen = false; }} aria-label="Close">&times;</button>
++      </div>
++      ${state.apiKeyView === "providers"
++        ? renderProviderList(state)
++        : renderProviderConfigure(state)}
++    </div>
++  `;
++}
++
++function renderProviderList(state: AppViewState) {
++  const configured = getConfiguredProviders(state);
++  // Show MiniMax suggestion if no keys configured
++  const suggestion = PROVIDER_REGISTRY.find((p) => p.recommended && p.suggestion);
++  const showSuggestion = suggestion && configured.size === 0;
++
++  return html`
++    ${showSuggestion ? html`
++      <div class="api-key-suggestion">
++        <span class="api-key-suggestion__icon">✨</span>
++        <span>${suggestion!.suggestion}</span>
++      </div>
++    ` : nothing}
++    <div class="api-key-provider-list">
++      ${PROVIDER_REGISTRY.map((p) => {
++        const isConfigured = configured.has(p.id);
++        return html`
++          <button
++            class="api-key-provider-card ${isConfigured ? "api-key-provider-card--configured" : ""} ${p.recommended ? "api-key-provider-card--recommended" : ""}"
++            @click=${() => {
++              state.apiKeyProvider = p.id;
++              state.apiKeyView = "configure";
++              state.apiKeyValue = "";
++              state.apiKeyFetchedModels = [];
++              state.apiKeySelectedModel = null;
++              state.apiKeyError = null;
++              state.apiKeySuccess = null;
++            }}
++          >
++            <div class="api-key-provider-card__info">
++              <span class="api-key-provider-card__name">
++                ${p.label}
++                ${p.recommended ? html`<span class="api-key-provider-card__badge">★</span>` : nothing}
++              </span>
++              <span class="api-key-provider-card__desc">${p.description}</span>
++            </div>
++            <span class="api-key-provider-card__status">
++              ${isConfigured
++                ? html`<span class="api-key-provider-card__check">✓</span>`
++                : html`<span class="api-key-provider-card__arrow">→</span>`}
++            </span>
++          </button>
++        `;
++      })}
++    </div>
++  `;
++}
++
++function renderProviderConfigure(state: AppViewState) {
++  const provider = PROVIDER_REGISTRY.find((p) => p.id === state.apiKeyProvider);
++  if (!provider) {return nothing;}
++
++  const handleSaveAndDetect = async () => {
++    await saveApiKeyAndDetectModels(state);
++  };
++  const handleSetDefault = async () => {
++    await setDefaultModel(state);
++  };
++  const handleKeyInput = (e: Event) => {
++    state.apiKeyValue = (e.target as HTMLInputElement).value;
++    state.apiKeyError = null;
++    state.apiKeySuccess = null;
++  };
++  const handleKeyDown = async (e: KeyboardEvent) => {
++    if (e.key === "Enter" && !state.apiKeySaving && state.apiKeyValue.trim()) {
++      await handleSaveAndDetect();
++    }
++  };
++
++  const configured = getConfiguredProviders(state);
++  const isConfigured = configured.has(state.apiKeyProvider);
++
++  return html`
++    <div class="api-key-configure">
++      ${isConfigured ? html`
++        <div class="api-key-popover__status api-key-popover__status--ok">
++          <span class="api-key-popover__status-dot"></span>
++          <span>Key configured — enter a new key to update</span>
++        </div>
++      ` : nothing}
++      <label class="api-key-popover__field">
++        <span class="api-key-popover__label">${isConfigured ? "Update API Key" : "API Key"}</span>
++        <input
++          type="password"
++          placeholder=${provider.placeholder}
++          .value=${state.apiKeyValue}
++          @input=${handleKeyInput}
++          @keydown=${handleKeyDown}
++          autocomplete="off"
++        />
++      </label>
++
++      ${state.apiKeyError ? html`<div class="api-key-popover__msg api-key-popover__msg--error">${state.apiKeyError}</div>` : nothing}
++      ${state.apiKeySuccess ? html`<div class="api-key-popover__msg api-key-popover__msg--success">${state.apiKeySuccess}</div>` : nothing}
++
++      ${state.apiKeyValue.trim() && !state.apiKeySaving ? html`
++        <button
++          class="api-key-popover__save"
++          ?disabled=${state.apiKeySaving}
++          @click=${handleSaveAndDetect}
++        >
++          Save Key & Add Models
++        </button>
++      ` : nothing}
++
++      ${state.apiKeySaving ? html`
++        <div class="api-key-models-loading">
++          <span class="api-key-models-loading__spinner"></span>
++          <span>Saving…</span>
++        </div>
++      ` : nothing}
++
++      ${state.apiKeyFetchedModels.length > 0 ? html`
++        <div class="api-key-models">
++          <div class="api-key-models__header">
++            <span class="api-key-models__title">${state.apiKeyFetchedModels.length} model${state.apiKeyFetchedModels.length !== 1 ? "s" : ""} available</span>
++            <span class="api-key-models__hint">Select default model</span>
++          </div>
++          <div class="api-key-models__list">
++            ${state.apiKeyFetchedModels.slice(0, 50).map((m) => html`
++              <button
++                class="api-key-model-item ${m.id === state.apiKeySelectedModel ? "api-key-model-item--selected" : ""}"
++                @click=${() => { state.apiKeySelectedModel = m.id; }}
++              >
++                <span class="api-key-model-item__name">${m.name}</span>
++                ${m.contextWindow ? html`<span class="api-key-model-item__ctx">${Math.round(m.contextWindow / 1000)}k ctx</span>` : nothing}
++                ${m.id === state.apiKeySelectedModel ? html`<span class="api-key-model-item__check">✓</span>` : nothing}
++              </button>
++            `)}
++          </div>
++          <button
++            class="api-key-popover__save"
++            ?disabled=${!state.apiKeySelectedModel || state.apiKeySaving}
++            @click=${handleSetDefault}
++          >
++            ${state.apiKeySaving ? "Setting…" : `Set as Default Model`}
++          </button>
++        </div>
++      ` : nothing}
++    </div>
++  `;
++}
+diff --git a/ui/src/ui/fireclaw/whatsapp-topbar.ts b/ui/src/ui/fireclaw/whatsapp-topbar.ts
+new file mode 100644
+index 0000000000..f015a64bfc
+--- /dev/null
++++ b/ui/src/ui/fireclaw/whatsapp-topbar.ts
+@@ -0,0 +1,493 @@
++// FireClaw fork extension — WhatsApp topbar dropdown.
++// Kept in a dedicated file so upstream rebases do not collide with our patches.
++// Only touchpoint upstream: a single import + render call in app-render.ts.
++
++import { html, nothing } from "lit";
++import type { AppViewState } from "../app-view-state.ts";
++import { loadChannels } from "../controllers/channels.ts";
++import type { ChannelsState } from "../controllers/channels.types.ts";
++
++type WhatsAppChannelConfig = { dmPolicy?: string; allowFrom?: unknown };
++type ConfigWithChannels = { channels?: { whatsapp?: WhatsAppChannelConfig }; whatsapp?: WhatsAppChannelConfig };
++type ChannelStatus = { connected?: boolean; running?: boolean };
++
++/** Resolve WhatsApp connected state from channel snapshot or login state. */
++function isWhatsAppConnected(state: AppViewState): boolean {
++  // Prefer persistent channel status from channels.status RPC
++  const snap = state.channelsSnapshot;
++  if (snap) {
++    const wa = snap.channels?.whatsapp as { connected?: boolean } | undefined;
++    if (wa && typeof wa.connected === "boolean") {
++      return wa.connected;
++    }
++  }
++  // Fall back to login flow state
++  return state.whatsappLoginConnected === true;
++}
++
++/** Get WhatsApp status object from channels snapshot. */
++function getWhatsAppStatus(state: AppViewState) {
++  const snap = state.channelsSnapshot;
++  if (!snap) {return null;}
++  return (snap.channels?.whatsapp ?? null) as {
++    configured?: boolean;
++    linked?: boolean;
++    running?: boolean;
++    connected?: boolean;
++    self?: { e164?: string | null; jid?: string | null } | null;
++    lastConnectedAt?: number | null;
++    lastMessageAt?: number | null;
++    lastError?: string | null;
++    reconnectAttempts?: number;
++    lastDisconnect?: { at: number; error?: string | null; loggedOut?: boolean | null } | null;
++  } | null;
++}
++
++/** Format a timestamp as relative time (e.g. "2m ago", "3h ago"). */
++function formatRelativeTime(ts: number | null | undefined): string {
++  if (!ts) {return "—";}
++  const diff = Date.now() - ts;
++  if (diff < 60_000) {return "just now";}
++  if (diff < 3_600_000) {return `${Math.floor(diff / 60_000)}m ago`;}
++  if (diff < 86_400_000) {return `${Math.floor(diff / 3_600_000)}h ago`;}
++  return `${Math.floor(diff / 86_400_000)}d ago`;
++}
++
++/** Parse raw WhatsApp error (Boom JSON or string) into a clean user-friendly message. */
++function parseWhatsAppError(raw: string | null | undefined): string | null {
++  if (!raw) {return null;}
++  try {
++    const obj = JSON.parse(raw);
++    const code = obj?.error?.data?.reason ?? obj?.output?.statusCode ?? obj?.statusCode;
++    const message = obj?.output?.payload?.message ?? obj?.error?.message ?? obj?.message;
++    if (code === "401" || code === 401) {return "Session expired";}
++    if (code === "428" || code === 428) {return "Connection interrupted";}
++    if (typeof message === "string" && message.length < 100) {return message;}
++    return "Connection error";
++  } catch {
++    // Not JSON — return as-is if short, else generic
++    return raw.length < 80 ? raw : "Connection error";
++  }
++}
++
++/** Resolve current WhatsApp dmPolicy from configSnapshot. */
++function getWhatsAppDmPolicy(state: AppViewState): string {
++  const cfg = (state.configSnapshot?.config ?? state.configForm) as ConfigWithChannels | undefined;
++  const wa = cfg?.channels?.whatsapp ?? cfg?.whatsapp;
++  return wa?.dmPolicy ?? "open";
++}
++
++/** Resolve current WhatsApp allowFrom list from configSnapshot. */
++function getWhatsAppAllowFrom(state: AppViewState): string[] {
++  const cfg = (state.configSnapshot?.config ?? state.configForm) as ConfigWithChannels | undefined;
++  const wa = cfg?.channels?.whatsapp ?? cfg?.whatsapp;
++  const list = wa?.allowFrom;
++  return Array.isArray(list) ? list.map(String) : [];
++}
++
++export function renderTopbarWhatsAppButton(state: AppViewState) {
++  const connected = isWhatsAppConnected(state);
++  const wa = getWhatsAppStatus(state);
++  const busy = state.whatsappBusy;
++  const dropdownOpen = state.whatsappDropdownOpen;
++
++  const toggleDropdown = () => {
++    state.whatsappDropdownOpen = !state.whatsappDropdownOpen;
++    if (!state.whatsappDropdownOpen) {
++      state.whatsappDropdownView = "status";
++      state.whatsappLoginMessage = null;
++    } else {
++      // Refresh channel status when opening
++      if (state.client && state.connected) {
++        loadChannels(state as unknown as ChannelsState, true);
++      }
++    }
++  };
++
++  const closeDropdown = () => {
++    state.whatsappDropdownOpen = false;
++    state.whatsappDropdownView = "status";
++    state.whatsappLoginMessage = null;
++  };
++
++  const handleOverlayClick = (e: Event) => {
++    if (e.target === e.currentTarget) {closeDropdown();}
++  };
++
++  const statusLabel = busy
++    ? "Connecting…"
++    : connected
++      ? "WhatsApp"
++      : "Connect";
++
++  // Count connected channels
++  let connectedCount = 0;
++  let totalChannels = 0;
++  if (state.channelsSnapshot) {
++    const channels = state.channelsSnapshot.channels ?? {};
++    for (const [, ch] of Object.entries(channels)) {
++      totalChannels++;
++      const status = ch as ChannelStatus | undefined;
++      if (status?.connected || status?.running) {connectedCount++;}
++    }
++  }
++
++  return html`
++    <div class="wa-dropdown-wrapper">
++      <button
++        class="wa-dropdown-trigger ${connected ? "wa-dropdown-trigger--connected" : ""}"
++        @click=${toggleDropdown}
++        ?disabled=${busy && !dropdownOpen}
++      >
++        <span class="wa-dropdown-trigger__dot">
++          ${connected
++            ? html`<span class="wa-dot wa-dot--connected-ping"></span><span class="wa-dot wa-dot--connected"></span>`
++            : html`<span class="wa-dot wa-dot--disconnected"></span>`}
++        </span>
++        <svg class="wa-dropdown-trigger__icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
++          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
++        </svg>
++        <span class="wa-dropdown-trigger__label">${statusLabel}</span>
++        ${totalChannels > 0 ? html`<span class="wa-dropdown-trigger__count">${connectedCount}/${totalChannels}</span>` : nothing}
++        <svg class="wa-dropdown-trigger__chevron ${dropdownOpen ? "wa-dropdown-trigger__chevron--open" : ""}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
++      </button>
++      ${dropdownOpen ? html`
++        <div class="wa-dropdown-backdrop" @click=${handleOverlayClick}></div>
++        <div class="wa-dropdown-panel">
++          ${state.whatsappDropdownView === "status"
++            ? renderWaDropdownStatus(state, wa, connected, closeDropdown)
++            : state.whatsappDropdownView === "qr"
++              ? renderWaDropdownQr(state, closeDropdown)
++              : renderWaDropdownSettings(state, closeDropdown)}
++        </div>
++      ` : nothing}
++    </div>
++  `;
++}
++
++/** Dropdown view: Channel status list. */
++function renderWaDropdownStatus(
++  state: AppViewState,
++  wa: ReturnType<typeof getWhatsAppStatus>,
++  connected: boolean,
++  close: () => void,
++) {
++  const snap = state.channelsSnapshot;
++  const tg = snap?.channels?.telegram as { configured?: boolean; running?: boolean } | undefined;
++
++  const startQr = async () => {
++    if (!state.client || !state.connected) {
++      state.whatsappLoginMessage = "Not connected to gateway.";
++      return;
++    }
++    state.whatsappDropdownView = "qr";
++    await state.handleWhatsAppStart(false);
++    if (state.whatsappLoginQrDataUrl) {
++      state.handleWhatsAppWait();
++    }
++  };
++
++  const phoneDisplay = wa?.self?.e164
++    ? wa.self.e164
++    : wa?.self?.jid
++      ? wa.self.jid.split("@")[0]
++      : null;
++
++  return html`
++    <div class="wa-dropdown-header">
++      <span class="wa-dropdown-header__title">Channels</span>
++      <button class="wa-dropdown-close" @click=${close} aria-label="Close">&times;</button>
++    </div>
++
++    <div class="wa-dropdown-item ${connected ? "wa-dropdown-item--live" : ""}">
++      <div class="wa-dropdown-item__left">
++        <span class="wa-dropdown-item__dot">
++          ${connected
++            ? html`<span class="wa-dot wa-dot--connected-ping"></span><span class="wa-dot wa-dot--connected"></span>`
++            : html`<span class="wa-dot wa-dot--disconnected"></span>`}
++        </span>
++        <div class="wa-dropdown-item__info">
++          <span class="wa-dropdown-item__name">WhatsApp</span>
++          ${connected && phoneDisplay
++            ? html`<span class="wa-dropdown-item__detail">${phoneDisplay}</span>`
++            : nothing}
++        </div>
++      </div>
++      <div class="wa-dropdown-item__right">
++        ${connected
++          ? html`
++              <span class="wa-dropdown-badge wa-dropdown-badge--live">
++                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
++                Live
++              </span>
++              <button class="wa-dropdown-action" @click=${() => { state.whatsappDropdownView = "settings"; }} title="Settings">
++                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
++              </button>
++            `
++          : wa?.linked
++            ? html`
++                <span class="wa-dropdown-badge wa-dropdown-badge--offline">Disconnected</span>
++                <button class="wa-dropdown-action" @click=${() => { state.whatsappDropdownView = "settings"; }} title="Settings">
++                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
++                </button>
++              `
++            : html`
++                <button class="wa-dropdown-action wa-dropdown-action--connect" @click=${startQr}>
++                  ${state.whatsappBusy ? "Connecting…" : "Setup →"}
++                </button>
++              `}
++      </div>
++    </div>
++
++    ${connected ? html`
++      <div class="wa-dropdown-statusbar">
++        ${wa?.lastConnectedAt ? html`<span class="wa-dropdown-statusbar__item">Connected ${formatRelativeTime(wa.lastConnectedAt)}</span>` : nothing}
++        ${wa?.lastMessageAt ? html`<span class="wa-dropdown-statusbar__item">Last msg ${formatRelativeTime(wa.lastMessageAt)}</span>` : nothing}
++      </div>
++    ` : wa?.linked && parseWhatsAppError(wa?.lastError) ? html`
++      <div class="wa-dropdown-statusbar wa-dropdown-statusbar--error">
++        <span class="wa-dropdown-statusbar__item">${parseWhatsAppError(wa?.lastError)} — relink to reconnect</span>
++      </div>
++    ` : nothing}
++
++    <div class="wa-dropdown-item wa-dropdown-item--live">
++      <div class="wa-dropdown-item__left">
++        <span class="wa-dropdown-item__dot"><span class="wa-dot wa-dot--web"></span></span>
++        <div class="wa-dropdown-item__info">
++          <span class="wa-dropdown-item__name">Web Chat</span>
++          <span class="wa-dropdown-item__detail">Always available</span>
++        </div>
++      </div>
++      <div class="wa-dropdown-item__right">
++        <span class="wa-dropdown-badge wa-dropdown-badge--live">
++          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
++          Live
++        </span>
++      </div>
++    </div>
++
++    ${tg?.configured ? html`
++      <div class="wa-dropdown-item ${tg.running ? "wa-dropdown-item--live" : ""}">
++        <div class="wa-dropdown-item__left">
++          <span class="wa-dropdown-item__dot">
++            ${tg.running
++              ? html`<span class="wa-dot wa-dot--telegram"></span>`
++              : html`<span class="wa-dot wa-dot--disconnected"></span>`}
++          </span>
++          <div class="wa-dropdown-item__info">
++            <span class="wa-dropdown-item__name">Telegram</span>
++          </div>
++        </div>
++        <div class="wa-dropdown-item__right">
++          ${tg.running
++            ? html`<span class="wa-dropdown-badge wa-dropdown-badge--live">Live</span>`
++            : html`<span class="wa-dropdown-badge wa-dropdown-badge--offline">Offline</span>`}
++        </div>
++      </div>
++    ` : nothing}
++
++    <div class="wa-dropdown-footer">
++      <button class="wa-dropdown-footer__link" @click=${() => { close(); state.setTab("channels"); }}>
++        Manage channels →
++      </button>
++    </div>
++
++    ${state.whatsappLoginMessage ? html`<div class="wa-dropdown-message">${state.whatsappLoginMessage}</div>` : nothing}
++  `;
++}
++
++/** Dropdown view: QR code scan. */
++function renderWaDropdownQr(state: AppViewState, close: () => void) {
++  const connected = state.whatsappLoginConnected === true;
++  const goBack = () => {
++    state.whatsappDropdownView = "status";
++    state.whatsappLoginQrDataUrl = null;
++    state.whatsappLoginMessage = null;
++  };
++
++  return html`
++    <div class="wa-dropdown-header">
++      <button class="wa-dropdown-back" @click=${goBack} aria-label="Back">
++        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
++      </button>
++      <span class="wa-dropdown-header__title">Connect WhatsApp</span>
++      <button class="wa-dropdown-close" @click=${close} aria-label="Close">&times;</button>
++    </div>
++
++    ${connected
++      ? html`
++          <div class="wa-dropdown-qr-success">
++            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
++            <p>Connected!</p>
++          </div>
++        `
++      : html`
++          <div class="wa-dropdown-qr-steps">
++            <div class="wa-dropdown-qr-step"><span class="wa-dropdown-qr-step__num">1</span> Open WhatsApp on your phone</div>
++            <div class="wa-dropdown-qr-step"><span class="wa-dropdown-qr-step__num">2</span> Go to Linked Devices</div>
++            <div class="wa-dropdown-qr-step"><span class="wa-dropdown-qr-step__num">3</span> Scan this code</div>
++          </div>
++          ${state.whatsappLoginQrDataUrl
++            ? html`<div class="wa-dropdown-qr-img"><img src=${state.whatsappLoginQrDataUrl} alt="QR" width="200" height="200" /></div>`
++            : state.whatsappBusy
++              ? html`<div class="wa-dropdown-qr-loading"><span class="wa-qr-modal__spinner"></span> Generating QR…</div>`
++              : nothing}
++        `}
++
++    ${state.whatsappLoginMessage ? html`<div class="wa-dropdown-message">${state.whatsappLoginMessage}</div>` : nothing}
++
++    ${state.whatsappBusy && state.whatsappLoginQrDataUrl
++      ? html`<div class="wa-dropdown-qr-waiting"><span class="wa-qr-modal__spinner"></span> Waiting for scan…</div>`
++      : nothing}
++  `;
++}
++
++/** Dropdown view: WhatsApp settings. */
++function renderWaDropdownSettings(state: AppViewState, close: () => void) {
++  const wa = getWhatsAppStatus(state);
++  const goBack = () => { state.whatsappDropdownView = "status"; };
++
++  const handleDisconnect = async () => {
++    await state.handleWhatsAppLogout();
++    state.whatsappDropdownView = "status";
++    if (state.client && state.connected) {
++      loadChannels(state as unknown as ChannelsState, true);
++    }
++  };
++
++  const handleReconnect = async () => {
++    state.whatsappDropdownView = "qr";
++    await state.handleWhatsAppStart(true);
++    if (state.whatsappLoginQrDataUrl) {
++      state.handleWhatsAppWait();
++    }
++  };
++
++  const phoneDisplay = wa?.self?.e164
++    ? wa.self.e164
++    : wa?.self?.jid
++      ? wa.self.jid.split("@")[0]
++      : "Unknown";
++
++  // Message rules — read current dmPolicy + allowFrom from config
++  const currentDmPolicy = getWhatsAppDmPolicy(state);
++  const currentAllowFrom = getWhatsAppAllowFrom(state);
++
++  const handleDmPolicyChange = async (e: Event) => {
++    const value = (e.target as HTMLSelectElement).value;
++    if (!state.client || !state.connected) {return;}
++    if (!state.configSnapshot?.hash) {
++      state.whatsappLoginMessage = "Config not loaded. Try again.";
++      return;
++    }
++    const baseHash = state.configSnapshot.hash;
++    try {
++      await state.client.request("config.patch", {
++        raw: JSON.stringify({ channels: { whatsapp: { dmPolicy: value } } }),
++        baseHash,
++      });
++      // Reload config to reflect the change
++      const res = await state.client.request<import("../types.ts").ConfigSnapshot>("config.get", {});
++      state.configSnapshot = res;
++    } catch {
++      state.whatsappLoginMessage = "Failed to save message rule.";
++    }
++  };
++
++  const handleAllowFromSave = async (e: Event) => {
++    e.preventDefault();
++    if (!state.client || !state.connected) {return;}
++    const form = e.target as HTMLFormElement;
++    const input = form.querySelector("input") as HTMLInputElement;
++    const raw = input.value.trim();
++    const numbers = raw
++      ? raw.split(",").map((s) => s.trim()).filter(Boolean)
++      : [];
++    if (!state.configSnapshot?.hash) {
++      state.whatsappLoginMessage = "Config not loaded. Try again.";
++      return;
++    }
++    const baseHash = state.configSnapshot.hash;
++    try {
++      await state.client.request("config.patch", {
++        raw: JSON.stringify({ channels: { whatsapp: { allowFrom: numbers } } }),
++        baseHash,
++      });
++      const res = await state.client.request<import("../types.ts").ConfigSnapshot>("config.get", {});
++      state.configSnapshot = res;
++      state.whatsappLoginMessage = "Allowed numbers saved.";
++    } catch {
++      state.whatsappLoginMessage = "Failed to save allowed numbers.";
++    }
++  };
++
++  return html`
++    <div class="wa-dropdown-header">
++      <button class="wa-dropdown-back" @click=${goBack} aria-label="Back">
++        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
++      </button>
++      <span class="wa-dropdown-header__title">WhatsApp Settings</span>
++      <button class="wa-dropdown-close" @click=${close} aria-label="Close">&times;</button>
++    </div>
++
++    <div class="wa-dropdown-settings-info">
++      <div class="wa-dropdown-settings-row">
++        <span class="wa-dropdown-settings-row__label">Phone</span>
++        <span class="wa-dropdown-settings-row__value">${phoneDisplay}</span>
++      </div>
++      ${wa?.lastConnectedAt ? html`
++        <div class="wa-dropdown-settings-row">
++          <span class="wa-dropdown-settings-row__label">Connected</span>
++          <span class="wa-dropdown-settings-row__value">${formatRelativeTime(wa.lastConnectedAt)}</span>
++        </div>
++      ` : nothing}
++      ${wa?.lastMessageAt ? html`
++        <div class="wa-dropdown-settings-row">
++          <span class="wa-dropdown-settings-row__label">Last message</span>
++          <span class="wa-dropdown-settings-row__value">${formatRelativeTime(wa.lastMessageAt)}</span>
++        </div>
++      ` : nothing}
++    </div>
++
++    <!-- Message rules section -->
++    <div class="wa-dropdown-settings-section">
++      <span class="wa-dropdown-settings-section__title">Message Rules</span>
++
++      <div class="wa-dropdown-settings-row">
++        <span class="wa-dropdown-settings-row__label">Accept DMs from</span>
++        <select class="wa-dropdown-settings-select" @change=${handleDmPolicyChange}>
++          <option value="open" ?selected=${currentDmPolicy === "open"}>Everyone</option>
++          <option value="allowlist" ?selected=${currentDmPolicy === "allowlist"}>Specific numbers</option>
++          <option value="pairing" ?selected=${currentDmPolicy === "pairing"}>Paired device only</option>
++          <option value="disabled" ?selected=${currentDmPolicy === "disabled"}>Disabled</option>
++        </select>
++      </div>
++
++      ${currentDmPolicy === "allowlist" ? html`
++        <form class="wa-dropdown-settings-allowform" @submit=${handleAllowFromSave}>
++          <label class="wa-dropdown-settings-row__label">Allowed numbers</label>
++          <input
++            class="wa-dropdown-settings-input"
++            type="text"
++            placeholder="+1234567890, +9876543210"
++            .value=${currentAllowFrom.join(", ")}
++          />
++          <button type="submit" class="wa-dropdown-settings-btn wa-dropdown-settings-btn--save">Save</button>
++        </form>
++      ` : nothing}
++    </div>
++
++    <div class="wa-dropdown-settings-actions">
++      <button class="wa-dropdown-settings-btn wa-dropdown-settings-btn--relink" @click=${handleReconnect} ?disabled=${state.whatsappBusy}>
++        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
++        Relink device
++      </button>
++      <button class="wa-dropdown-settings-btn wa-dropdown-settings-btn--disconnect" @click=${handleDisconnect} ?disabled=${state.whatsappBusy}>
++        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
++        ${state.whatsappBusy ? "Disconnecting…" : "Disconnect"}
++      </button>
++    </div>
++
++    ${state.whatsappLoginMessage ? html`<div class="wa-dropdown-message">${state.whatsappLoginMessage}</div>` : nothing}
++  `;
++}
+-- 
+2.53.0.windows.3
+
