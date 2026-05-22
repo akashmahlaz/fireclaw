@@ -1,15 +1,37 @@
 # 🔥 FireClaw — The Plan (Research-Backed v2)
 
-## What Is FireClaw?
+## Current Priority (Updated May 2026)
 
-~~One-click deploy your personal AI assistant.~~ ← Hostinger already does this at $10.99/mo.plus some ai credits charge1q234adRY 
+### Deployment is the #1 focus — this is what brings business.
+
+**What we deploy:**
+1. **OpenClaw** (our modified version) — Priority #1. Verify it works end-to-end.
+2. **Ad-Chain Verify Agent** (OpenClaw base + ad-tech modifications) — Priority #2. Client waiting.
+   - Pricing follows ad-tech market rates (not same as OpenClaw)
+   - Better UI/UX specific to ad verification workflows
+   - Scripts in `/scripts` folder contain initial attempts
+3. **SEO Agent** (OpenClaw base + SEO capabilities) — Priority #3.
+   - Site audits, auto backlink building, ranking analysis
+   - Connect with user's site for ongoing monitoring
+4. **All other agents** — Marked as "Coming Soon" in the marketplace
+
+**Deployment UX:**
+- User chooses an agent from the marketplace (catalog page)
+- Goes to a dedicated page for that agent type
+- Clicks deploy → pays → sees "Your agent is deploying" status
+- Dashboard shows deployed agents only (no deployment wizard inside dashboard)
+
+**Branch strategy:** Only working in `main` branch. Remove unused branches.
+
+---
+
+## What Is FireClaw?
 
 **FireClaw is the multi-agent management platform for OpenClaw.**
 
 Deploy, manage, and monitor multiple AI agents from one dashboard. Built for agencies, teams, and power users who need more than a single agent.
 
-Think: **Vercel for AI agents** — not another Hostinger.
-PLAN UPDATED TODAY --let me discuss with you what is my plan for future : lets make main the deployment great because all business will bring this, so what we will do..? 1. we will support deploy openclaw that is our modified version 2. we will let user to deply ad-chain verify agant (openclaw instance same but with more modification and pricing will be according to ad-tech market not same as openclaw also with some better ui/ux, i will provide clear instruction how  to build it, actaully i have tried it but you can check files in script folder but i will also tell you clear how to do it ) 3. we will support deployment of Seo Agent (same our openclaw our modified version but specific seo capabilities and work for seo , even connect with site , do audits and auto backlink building and more ), another agents we are showing in deployment wizard we will mark it as comming soon, now lets discuss how deployment should be look like , 1 thing, we will not show deployment in dashboard , the moment user choose his agent, he will go to the dedicated page of that agent where we will show him some deploy button and click on it he will go to pay money for that agent and after pay we will show that your agent is deploying , let me know is this idea good or it is good to do all in dashboard, now come to priority, the first thing we need to give priority is the deployment of openclaw (our modified verion is working or not) then second the deployment of ad-tech becuase i have client for that, now write all this in your plan.md file and be aware of plan and git , remove git not needed brnaches, becuase we are only working in main branch, 
+Think: **Vercel for AI agents** — not another Hostinger. 
 
 ---
 

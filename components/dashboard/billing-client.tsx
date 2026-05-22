@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   CreditCard,
@@ -7,215 +7,299 @@ import {
   Server,
   ExternalLink,
   Check,
-} from "lucide-react"
-import { BlurFade } from "@/components/ui/blur-fade"
-import { BorderBeam } from "@/components/ui/border-beam"
-import { NumberTicker } from "@/components/ui/number-ticker"
-import { RainbowButton } from "@/components/ui/rainbow-button"
-import { cn } from "@/lib/utils"
+  Crown,
+} from "lucide-react";
+import { BlurFade } from "@/components/ui/blur-fade";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const currentPlan = {
   name: "Starter",
   price: 7.99,
-  specs: "2 vCPU · 4 GB RAM · 40 GB NVMe",
-  features: ["1 OpenClaw instance", "3 channels", "EU region", "SSL + subdomain", "Community support"],
-}
+  features: [
+    "1 OpenClaw instance",
+    "3 channels",
+    "EU region",
+    "SSL + subdomain",
+    "Community support",
+  ],
+};
 
 const upgradePlans = [
-  { name: "Standard", price: 14.99, specs: "4 vCPU · 8 GB RAM" },
-  { name: "Pro", price: 29.99, specs: "8 vCPU · 16 GB RAM", popular: true },
-  { name: "Enterprise", price: 59.99, specs: "16 vCPU · 32 GB RAM" },
-]
+  {
+    name: "Standard",
+    price: 14.99,
+    features: [
+      "3 OpenClaw instances",
+      "10 channels",
+      "Multi-region",
+      "Priority support",
+    ],
+  },
+  {
+    name: "Pro",
+    price: 29.99,
+    popular: true,
+    features: [
+      "10 OpenClaw instances",
+      "Unlimited channels",
+      "Custom domains",
+      "Dedicated support",
+    ],
+  },
+  {
+    name: "Enterprise",
+    price: 59.99,
+    features: [
+      "Unlimited instances",
+      "SLA guarantee",
+      "SSO & RBAC",
+      "24/7 phone support",
+    ],
+  },
+];
 
 const invoices = [
-  { date: "Jun 1, 2025", amount: "$7.99", status: "Paid", desc: "Starter Plan — 1 agent" },
-  { date: "May 1, 2025", amount: "$7.99", status: "Paid", desc: "Starter Plan — 1 agent" },
-  { date: "Apr 1, 2025", amount: "$7.99", status: "Paid", desc: "Starter Plan — 1 agent" },
-]
+  {
+    date: "Jun 1, 2025",
+    amount: "$7.99",
+    status: "Paid",
+    desc: "Starter Plan — Monthly",
+  },
+  {
+    date: "May 1, 2025",
+    amount: "$7.99",
+    status: "Paid",
+    desc: "Starter Plan — Monthly",
+  },
+  {
+    date: "Apr 1, 2025",
+    amount: "$7.99",
+    status: "Paid",
+    desc: "Starter Plan — Monthly",
+  },
+];
 
 export function BillingClient({
   agentCount,
   runningCount,
   totalMonthly,
 }: {
-  agentCount: number
-  runningCount: number
-  totalMonthly: number
+  agentCount: number;
+  runningCount: number;
+  totalMonthly: number;
 }) {
   return (
     <div className="p-6 lg:p-8">
       <BlurFade inView delay={0}>
         <div className="mx-auto max-w-4xl">
-          <h1 className="mb-1 text-[22px] font-black tracking-[-0.02em] text-neutral-900">
-            Billing
-          </h1>
-          <p className="mb-8 text-[13px] text-neutral-500">
-            Manage your subscription, usage, and invoices.
-          </p>
+          {/* Page header */}
+          <div className="mb-8">
+            <h1 className="font-heading text-2xl font-bold tracking-tight text-neutral-900">
+              Billing
+            </h1>
+            <p className="mt-1 text-sm text-neutral-500">
+              Manage your subscription and invoices
+            </p>
+          </div>
 
-          {/* Summary cards */}
+          {/* Summary row */}
           <div className="mb-8 grid gap-4 sm:grid-cols-3">
-            <SummaryCard
-              icon={CreditCard}
-              label="Monthly Cost"
-              value={
-                <span className="text-[22px] font-black text-neutral-900">
-                  $<NumberTicker value={totalMonthly} decimalPlaces={2} />
-                </span>
-              }
-            />
-            <SummaryCard
-              icon={Server}
-              label="Active Agents"
-              value={
-                <span className="text-[22px] font-black text-neutral-900">
-                  <NumberTicker value={runningCount} />
-                  <span className="text-[14px] font-medium text-neutral-400"> / {agentCount}</span>
-                </span>
-              }
-            />
-            <SummaryCard
-              icon={Zap}
-              label="Current Plan"
-              value={
-                <span className="text-[22px] font-black text-orange-600">
+            <Card className="rounded-2xl border-neutral-200 shadow-sm">
+              <CardContent className="p-5">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100">
+                  <CreditCard className="h-4 w-4 text-neutral-500" />
+                </div>
+                <p className="text-xs text-neutral-500">Monthly Cost</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">
+                  ${totalMonthly.toFixed(2)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-neutral-200 shadow-sm">
+              <CardContent className="p-5">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100">
+                  <Server className="h-4 w-4 text-neutral-500" />
+                </div>
+                <p className="text-xs text-neutral-500">Active Agents</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">
+                  {runningCount}
+                  <span className="text-sm font-normal text-neutral-400">
+                    {" "}
+                    / {agentCount}
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-neutral-200 shadow-sm">
+              <CardContent className="p-5">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
+                  <Zap className="h-4 w-4 text-orange-500" />
+                </div>
+                <p className="text-xs text-neutral-500">Current Plan</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight text-orange-600">
                   {currentPlan.name}
-                </span>
-              }
-            />
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Current plan */}
-          <div className="relative mb-8 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6">
-            <BorderBeam size={150} borderWidth={2} colorFrom="#f97316" colorTo="#fb923c" duration={12} />
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[2px] text-neutral-400">
-                  Current Plan
-                </p>
-                <h3 className="mt-1 text-[20px] font-black text-neutral-900">
-                  {currentPlan.name}{" "}
-                  <span className="font-medium text-neutral-400">
-                    ${currentPlan.price}/mo
-                  </span>
-                </h3>
-                <p className="mt-1 text-[12px] font-mono text-neutral-500">{currentPlan.specs}</p>
-                <ul className="mt-3 space-y-1.5">
-                  {currentPlan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-[13px] text-neutral-600">
-                      <Check className="size-3 text-emerald-500" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+          {/* Current plan section */}
+          <Card className="mb-8 rounded-2xl border-neutral-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                    Current Plan
+                  </p>
+                  <h3 className="font-heading mt-2 text-xl font-bold text-neutral-900">
+                    {currentPlan.name}
+                    <span className="ml-2 text-base font-normal text-neutral-400">
+                      ${currentPlan.price}/mo
+                    </span>
+                  </h3>
+                  <ul className="mt-4 space-y-2">
+                    {currentPlan.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-2.5 text-sm text-neutral-600"
+                      >
+                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl border-neutral-200 px-5 text-sm font-medium"
+                  >
+                    Manage Subscription
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600"
+                  >
+                    Cancel Plan
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <button className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-neutral-700 transition-all hover:bg-neutral-50">
-                  Manage Subscription
-                </button>
-                <button className="text-[12px] text-red-500 hover:text-red-600">
-                  Cancel Plan
-                </button>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Upgrade options */}
           <div className="mb-8">
-            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-wider text-neutral-400">
+            <h3 className="font-heading mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-400">
               Upgrade Your Plan
             </h3>
             <div className="grid gap-4 sm:grid-cols-3">
               {upgradePlans.map((plan) => (
-                <div
+                <Card
                   key={plan.name}
                   className={cn(
-                    "relative overflow-hidden rounded-2xl border bg-white p-5 transition-all hover:shadow-md",
-                    plan.popular ? "border-orange-200" : "border-neutral-200",
+                    "relative rounded-2xl shadow-sm transition-shadow hover:shadow-md",
+                    plan.popular
+                      ? "border-orange-300 ring-1 ring-orange-200"
+                      : "border-neutral-200",
                   )}
                 >
-                  {plan.popular && (
-                    <>
-                      <span className="absolute top-3 right-3 rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                  <CardContent className="p-5">
+                    {plan.popular && (
+                      <Badge className="absolute top-4 right-4 bg-orange-500 text-white hover:bg-orange-600">
+                        <Crown className="mr-1 h-3 w-3" />
                         Popular
-                      </span>
-                      <BorderBeam size={100} borderWidth={1.5} colorFrom="#f97316" colorTo="#fb923c" duration={8} />
-                    </>
-                  )}
-                  <p className="text-[16px] font-black text-neutral-900">{plan.name}</p>
-                  <p className="mt-1 text-[22px] font-black text-neutral-900">
-                    ${plan.price}
-                    <span className="text-[13px] font-medium text-neutral-400">/mo</span>
-                  </p>
-                  <p className="mt-1 text-[12px] font-mono text-neutral-400">{plan.specs}</p>
-                  <div className="mt-4">
-                    {plan.popular ? (
-                      <RainbowButton className="w-full text-[13px]">
-                        Upgrade
-                      </RainbowButton>
-                    ) : (
-                      <button className="w-full rounded-xl border border-neutral-200 bg-white py-2.5 text-[13px] font-semibold text-neutral-700 transition-all hover:bg-neutral-50">
-                        Upgrade
-                      </button>
+                      </Badge>
                     )}
-                  </div>
-                </div>
+                    <p className="font-heading text-base font-bold text-neutral-900">
+                      {plan.name}
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-neutral-900">
+                      ${plan.price}
+                      <span className="text-sm font-normal text-neutral-400">
+                        /mo
+                      </span>
+                    </p>
+                    <ul className="mt-4 space-y-2">
+                      {plan.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className="flex items-center gap-2 text-xs text-neutral-600"
+                        >
+                          <Check className="h-3 w-3 shrink-0 text-emerald-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className={cn(
+                        "mt-5 w-full rounded-xl text-sm font-medium",
+                        plan.popular
+                          ? "bg-orange-500 text-white hover:bg-orange-600"
+                          : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50",
+                      )}
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      Upgrade to {plan.name}
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
 
-          {/* Invoices */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[13px] font-bold uppercase tracking-wider text-neutral-400">
-                Recent Invoices
-              </h3>
-              <button className="flex items-center gap-1 text-[12px] font-medium text-orange-600 hover:text-orange-700">
-                View All <ExternalLink className="size-3" />
-              </button>
-            </div>
-            <div className="divide-y divide-neutral-100">
-              {invoices.map((inv, i) => (
-                <div key={i} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-[13px] font-medium text-neutral-700">{inv.desc}</p>
-                    <p className="text-[12px] text-neutral-400">{inv.date}</p>
+          {/* Recent invoices */}
+          <Card className="rounded-2xl border-neutral-200 shadow-sm">
+            <CardContent className="p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-heading text-sm font-semibold uppercase tracking-wider text-neutral-400">
+                  Recent Invoices
+                </h3>
+                <button className="flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-700">
+                  View All <ExternalLink className="h-3 w-3" />
+                </button>
+              </div>
+              <Separator className="mb-2" />
+              <div className="divide-y divide-neutral-100">
+                {invoices.map((inv, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between py-3.5"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-neutral-700">
+                        {inv.desc}
+                      </p>
+                      <p className="mt-0.5 text-xs text-neutral-400">
+                        {inv.date}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-50 text-emerald-600 hover:bg-emerald-50"
+                      >
+                        {inv.status}
+                      </Badge>
+                      <span className="text-sm font-semibold text-neutral-900">
+                        {inv.amount}
+                      </span>
+                      <button className="text-neutral-400 transition-colors hover:text-neutral-600">
+                        <Receipt className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                      {inv.status}
-                    </span>
-                    <span className="text-[14px] font-bold text-neutral-900">{inv.amount}</span>
-                    <button className="text-neutral-400 hover:text-neutral-600">
-                      <Receipt className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </BlurFade>
     </div>
-  )
-}
-
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: React.ReactNode
-}) {
-  return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-neutral-50">
-        <Icon className="size-4 text-neutral-400" />
-      </div>
-      <p className="mb-1 text-[11px] text-neutral-400">{label}</p>
-      {value}
-    </div>
-  )
+  );
 }

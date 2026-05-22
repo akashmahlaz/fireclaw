@@ -1,63 +1,57 @@
-﻿"use client"
+﻿"use client";
 
-import Link from "next/link"
-import { Activity, AlertTriangle, Bot, Rocket, TrendingUp, CheckCircle2, Clock } from "lucide-react"
-import { NumberTicker } from "@/components/ui/number-ticker"
-import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar"
-import { BlurFade } from "@/components/ui/blur-fade"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+  Bot,
+  Rocket,
+  Activity,
+  AlertCircle,
+  ArrowUpRight,
+  Globe,
+  Calendar,
+} from "lucide-react";
+import { BlurFade } from "@/components/ui/blur-fade";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface AgentSummary {
-  id: string
-  name: string
-  status: "provisioning" | "running" | "stopped" | "error"
-  region: string
-  createdAt: string
+  id: string;
+  name: string;
+  status: "provisioning" | "running" | "stopped" | "error";
+  region: string;
+  createdAt: string;
 }
 
 interface OverviewClientProps {
-  agentCount: number
-  runningCount: number
-  errorCount: number
-  agents: AgentSummary[]
+  agentCount: number;
+  runningCount: number;
+  errorCount: number;
+  agents: AgentSummary[];
 }
 
-const statusColor = {
+const statusDot: Record<AgentSummary["status"], string> = {
   running: "bg-emerald-500",
   provisioning: "bg-amber-500",
   stopped: "bg-neutral-400",
   error: "bg-red-500",
-}
+};
 
-const statusBadge = {
-  running: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  provisioning: "bg-amber-50 text-amber-700 border-amber-200",
-  stopped: "bg-neutral-100 text-neutral-500 border-neutral-200",
-  error: "bg-red-50 text-red-600 border-red-200",
-}
-
-const statusLabel = {
+const statusLabel: Record<AgentSummary["status"], string> = {
   running: "Running",
   provisioning: "Provisioning",
   stopped: "Stopped",
   error: "Error",
-}
+};
 
-const regionLabel: Record<string, string> = {
-  "eu-central": "Frankfurt",
-  "us-east": "Virginia",
-  "ap-south": "Mumbai",
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export function OverviewClient({
@@ -66,245 +60,210 @@ export function OverviewClient({
   errorCount,
   agents,
 }: OverviewClientProps) {
-  const stoppedCount = agentCount - runningCount - errorCount
-  const uptimePercent = agentCount > 0 ? Math.round((runningCount / agentCount) * 100) : 0
+  const uptimePercent =
+    agentCount > 0 ? Math.round((runningCount / agentCount) * 100) : 100;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 p-6 md:p-10">
+      {/* Header */}
       <BlurFade inView delay={0}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
-            <p className="text-sm text-muted-foreground">Your infrastructure at a glance.</p>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+              Welcome back
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Here&apos;s how your agents are performing today.
+            </p>
           </div>
-          <Button asChild size="sm">
+          <Button asChild>
             <Link href="/dashboard/deploy">
-              <Rocket className="mr-1.5 size-3.5" />
-              Deploy Agent
+              <Rocket className="mr-2 size-4" />
+              Choose Agent
             </Link>
           </Button>
         </div>
       </BlurFade>
 
-      {/* Stat cards — dashboard-01 layout */}
+      {/* Stat Cards */}
       <BlurFade inView delay={0.05}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
-              <Bot className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {agentCount > 0 ? <NumberTicker value={agentCount} /> : "0"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {agentCount === 0 ? "No agents deployed yet" : `${runningCount} currently active`}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Running</CardTitle>
-              <Activity className="size-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
-                {runningCount > 0 ? <NumberTicker value={runningCount} /> : "0"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {runningCount > 0 ? "Serving requests" : "No agents running"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Errors</CardTitle>
-              <AlertTriangle className="size-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className={cn("text-2xl font-bold", errorCount > 0 ? "text-red-500" : "text-foreground")}>
-                {errorCount > 0 ? <NumberTicker value={errorCount} /> : "0"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {errorCount === 0 ? "All clear" : "Need attention"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Fleet Health</CardTitle>
-              <TrendingUp className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <AnimatedCircularProgressBar
-                  max={100}
-                  value={uptimePercent}
-                  min={0}
-                  gaugePrimaryColor={uptimePercent >= 90 ? "#10b981" : uptimePercent >= 60 ? "#f59e0b" : "#ef4444"}
-                  gaugeSecondaryColor="#e5e7eb"
-                  className="size-12"
-                />
-                <div>
-                  <p className="text-2xl font-bold">{uptimePercent}%</p>
-                  <p className="text-xs text-muted-foreground">uptime</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Total Agents"
+            value={agentCount}
+            icon={<Bot className="size-4" />}
+            subtitle={
+              agentCount === 1
+                ? "1 agent deployed"
+                : `${agentCount} agents deployed`
+            }
+          />
+          <StatCard
+            label="Running"
+            value={runningCount}
+            icon={<Activity className="size-4" />}
+            valueClassName="text-emerald-600 dark:text-emerald-400"
+            subtitle="Currently active"
+          />
+          <StatCard
+            label="Errors"
+            value={errorCount}
+            icon={<AlertCircle className="size-4" />}
+            valueClassName={
+              errorCount > 0 ? "text-red-600 dark:text-red-400" : undefined
+            }
+            subtitle={
+              errorCount === 0 ? "All systems healthy" : "Needs attention"
+            }
+          />
+          <StatCard
+            label="Uptime"
+            value={`${uptimePercent}%`}
+            icon={<ArrowUpRight className="size-4" />}
+            valueClassName={
+              uptimePercent >= 90
+                ? "text-emerald-600 dark:text-emerald-400"
+                : uptimePercent >= 60
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-red-600 dark:text-red-400"
+            }
+            subtitle="Fleet health"
+          />
         </div>
       </BlurFade>
 
-      {/* Recent agents */}
+      {/* Recent Agents */}
       <BlurFade inView delay={0.1}>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Recent Agents</CardTitle>
-                  <CardDescription>Your last deployed agents and their status.</CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/agents">View all →</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {agents.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-12 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-xl border bg-muted">
-                    <Bot className="size-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">No agents yet</p>
-                    <p className="text-xs text-muted-foreground">Deploy your first agent to get started.</p>
-                  </div>
-                  <Button asChild size="sm" className="mt-2">
-                    <Link href="/dashboard/deploy">Deploy your first agent</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {agents.slice(0, 6).map((agent) => (
-                    <Link
-                      key={agent.id}
-                      href={`/dashboard/agents/${agent.id}`}
-                      className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-muted/50"
-                    >
-                      <div className={cn("size-2 shrink-0 rounded-full", statusColor[agent.status])} />
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm font-medium">{agent.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {regionLabel[agent.region] ?? agent.region}
-                        </span>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[11px] font-medium", statusBadge[agent.status])}
-                      >
-                        {statusLabel[agent.status]}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg font-semibold tracking-tight">
+              Recent Agents
+            </h2>
             {agents.length > 0 && (
-              <CardFooter className="border-t pt-4">
-                <p className="text-xs text-muted-foreground">
-                  Showing {Math.min(agents.length, 6)} of {agents.length} agents
-                </p>
-              </CardFooter>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboard/agents">View all</Link>
+              </Button>
             )}
-          </Card>
+          </div>
 
-          {/* Quick status panel */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Status Breakdown</CardTitle>
-              <CardDescription>All agents by current state.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <StatusRow
-                icon={<CheckCircle2 className="size-4 text-emerald-500" />}
-                label="Running"
-                value={runningCount}
-                total={agentCount}
-                color="bg-emerald-500"
-              />
-              <StatusRow
-                icon={<Clock className="size-4 text-amber-500" />}
-                label="Provisioning"
-                value={agents.filter((a) => a.status === "provisioning").length}
-                total={agentCount}
-                color="bg-amber-500"
-              />
-              <StatusRow
-                icon={<AlertTriangle className="size-4 text-red-500" />}
-                label="Error"
-                value={errorCount}
-                total={agentCount}
-                color="bg-red-500"
-              />
-              <StatusRow
-                icon={<Bot className="size-4 text-muted-foreground" />}
-                label="Stopped"
-                value={stoppedCount > 0 ? stoppedCount : 0}
-                total={agentCount}
-                color="bg-neutral-400"
-              />
-            </CardContent>
-            {agentCount === 0 && (
-              <CardFooter>
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link href="/dashboard/deploy">
-                    <Rocket className="mr-1.5 size-3.5" />
-                    Deploy your first agent
-                  </Link>
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
+          {agents.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="grid gap-3">
+              {agents.slice(0, 6).map((agent, i) => (
+                <BlurFade key={agent.id} inView delay={0.12 + i * 0.03}>
+                  <AgentRow agent={agent} />
+                </BlurFade>
+              ))}
+            </div>
+          )}
         </div>
       </BlurFade>
     </div>
-  )
+  );
 }
 
-function StatusRow({
-  icon,
+function StatCard({
   label,
   value,
-  total,
-  color,
+  icon,
+  subtitle,
+  valueClassName,
 }: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  total: number
-  color: string
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  subtitle: string;
+  valueClassName?: string;
 }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="font-medium">{label}</span>
-        </div>
-        <span className="text-muted-foreground">{value}</span>
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-muted">
-        <div
-          className={cn("h-1.5 rounded-full transition-all", color)}
-          style={{ width: `${pct}%` }}
+    <Card className="rounded-xl border-0 bg-muted/40 shadow-none transition-shadow hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {label}
+        </CardTitle>
+        <div className="text-muted-foreground/60">{icon}</div>
+      </CardHeader>
+      <CardContent>
+        <p
+          className={cn(
+            "text-3xl font-semibold tracking-tight",
+            valueClassName,
+          )}
+        >
+          {value}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AgentRow({ agent }: { agent: AgentSummary }) {
+  return (
+    <Link
+      href={`/dashboard/agents/${agent.id}`}
+      className="group flex items-center gap-4 rounded-xl bg-muted/30 px-5 py-4 transition-all hover:bg-muted/60 hover:shadow-sm"
+    >
+      {/* Status dot */}
+      <span className="relative flex size-3">
+        <span
+          className={cn(
+            "absolute inline-flex size-full rounded-full opacity-30",
+            agent.status === "running" && "animate-ping",
+            statusDot[agent.status],
+          )}
         />
+        <span
+          className={cn(
+            "relative inline-flex size-3 rounded-full",
+            statusDot[agent.status],
+          )}
+        />
+      </span>
+
+      {/* Agent info */}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-sm font-medium">{agent.name}</span>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Globe className="size-3" />
+            {agent.region}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Calendar className="size-3" />
+            {formatDate(agent.createdAt)}
+          </span>
+        </div>
       </div>
+
+      {/* Status badge */}
+      <Badge variant="outline" className="text-xs capitalize">
+        {statusLabel[agent.status]}
+      </Badge>
+    </Link>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl bg-muted/30 px-6 py-16 text-center">
+      <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+        <Bot className="size-6 text-muted-foreground" />
+      </div>
+      <h3 className="font-heading mt-5 text-base font-semibold">
+        No agents deployed yet
+      </h3>
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        Deploy your first AI agent in minutes. Choose from OpenClaw, Ad-Chain
+        Verify, SEO Agent, and more.
+      </p>
+      <Button asChild className="mt-6">
+        <Link href="/dashboard/deploy">
+          <Rocket className="mr-2 size-4" />
+          Deploy Your First Agent
+        </Link>
+      </Button>
     </div>
-  )
+  );
 }
