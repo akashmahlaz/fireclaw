@@ -110,7 +110,7 @@ function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="FireClaw">
+            <SidebarMenuButton size="lg" render={<Link href="/dashboard" />} tooltip="FireClaw">
               <Link href="/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-neutral-900 text-white">
                   <Flame className="size-4 text-orange-400" />
@@ -131,7 +131,7 @@ function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="New Agent">
+                <SidebarMenuButton render={<Link href="/dashboard/deploy" />} tooltip="New Agent">
                   <Link href="/dashboard/deploy">
                     <Plus />
                     <span>New Agent</span>
@@ -149,7 +149,7 @@ function AppSidebar({
             <SidebarMenu>
               {mainNav.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                  <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive(item.href)} tooltip={item.label}>
                     <Link href={item.href}>
                       <item.icon />
                       <span>{item.label}</span>
@@ -168,7 +168,7 @@ function AppSidebar({
             <SidebarMenu>
               {accountNav.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                  <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive(item.href)} tooltip={item.label}>
                     <Link href={item.href}>
                       <item.icon />
                       <span>{item.label}</span>
@@ -202,11 +202,12 @@ function NavUser({
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger render={
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
+            />
+          }>
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.image} alt={user.name} />
                 <AvatarFallback className="rounded-lg text-xs font-semibold">
@@ -218,7 +219,6 @@ function NavUser({
                 <span className="truncate text-xs text-muted-foreground">{user.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
@@ -249,17 +249,13 @@ function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">
+              <DropdownMenuItem render={<Link href="/dashboard/settings" />}>
                   <BadgeCheck className="mr-2 size-4" />
                   Account settings
-                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/billing">
+              <DropdownMenuItem render={<Link href="/dashboard/billing" />}>
                   <CreditCard className="mr-2 size-4" />
                   Billing
-                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

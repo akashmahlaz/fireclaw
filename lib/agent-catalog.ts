@@ -352,7 +352,6 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     status: "coming-soon",
   },
   {
-    {
     id: "adtech-crawler",
     name: "AdTech Supply Chain Verifier",
     icon: "📡",
