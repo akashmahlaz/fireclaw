@@ -98,37 +98,37 @@ export function BillingClient({
         <div className="mx-auto max-w-4xl">
           {/* Page header */}
           <div className="mb-8">
-            <h1 className="font-heading text-2xl font-bold tracking-tight text-neutral-900">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-stone-900">
               Billing
             </h1>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-stone-500">
               Manage your subscription and invoices
             </p>
           </div>
 
           {/* Summary row */}
           <div className="mb-8 grid gap-4 sm:grid-cols-3">
-            <Card className="rounded-2xl border-neutral-200 shadow-sm">
+            <Card className="rounded-2xl border-stone-200 shadow-sm">
               <CardContent className="p-5">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100">
-                  <CreditCard className="h-4 w-4 text-neutral-500" />
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100">
+                  <CreditCard className="h-4 w-4 text-stone-500" />
                 </div>
-                <p className="text-xs text-neutral-500">Monthly Cost</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">
+                <p className="text-xs text-stone-500">Monthly Cost</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight text-stone-900">
                   ${totalMonthly.toFixed(2)}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-neutral-200 shadow-sm">
+            <Card className="rounded-2xl border-stone-200 shadow-sm">
               <CardContent className="p-5">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100">
-                  <Server className="h-4 w-4 text-neutral-500" />
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100">
+                  <Server className="h-4 w-4 text-stone-500" />
                 </div>
-                <p className="text-xs text-neutral-500">Active Agents</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">
+                <p className="text-xs text-stone-500">Active Agents</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight text-stone-900">
                   {runningCount}
-                  <span className="text-sm font-normal text-neutral-400">
+                  <span className="text-sm font-normal text-stone-400">
                     {" "}
                     / {agentCount}
                   </span>
@@ -136,12 +136,12 @@ export function BillingClient({
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-neutral-200 shadow-sm">
+            <Card className="rounded-2xl border-stone-200 shadow-sm">
               <CardContent className="p-5">
                 <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
                   <Zap className="h-4 w-4 text-orange-500" />
                 </div>
-                <p className="text-xs text-neutral-500">Current Plan</p>
+                <p className="text-xs text-stone-500">Current Plan</p>
                 <p className="mt-1 text-2xl font-bold tracking-tight text-orange-600">
                   {currentPlan.name}
                 </p>
@@ -150,16 +150,16 @@ export function BillingClient({
           </div>
 
           {/* Current plan section */}
-          <Card className="mb-8 rounded-2xl border-neutral-200 shadow-sm">
+          <Card className="mb-8 rounded-2xl border-stone-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
                     Current Plan
                   </p>
-                  <h3 className="font-heading mt-2 text-xl font-bold text-neutral-900">
+                  <h3 className="font-display mt-2 text-xl font-bold text-stone-900">
                     {currentPlan.name}
-                    <span className="ml-2 text-base font-normal text-neutral-400">
+                    <span className="ml-2 text-base font-normal text-stone-400">
                       ${currentPlan.price}/mo
                     </span>
                   </h3>
@@ -167,7 +167,7 @@ export function BillingClient({
                     {currentPlan.features.map((feature) => (
                       <li
                         key={feature}
-                        className="flex items-center gap-2.5 text-sm text-neutral-600"
+                        className="flex items-center gap-2.5 text-sm text-stone-600"
                       >
                         <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                         {feature}
@@ -178,7 +178,7 @@ export function BillingClient({
                 <div className="flex flex-col gap-2.5">
                   <Button
                     variant="outline"
-                    className="rounded-xl border-neutral-200 px-5 text-sm font-medium"
+                    className="rounded-xl border-stone-200 px-5 text-sm font-medium"
                   >
                     Manage Subscription
                   </Button>
@@ -195,7 +195,7 @@ export function BillingClient({
 
           {/* Upgrade options */}
           <div className="mb-8">
-            <h3 className="font-heading mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-400">
+            <h3 className="font-display mb-4 text-sm font-semibold uppercase tracking-wider text-stone-400">
               Upgrade Your Plan
             </h3>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -206,7 +206,7 @@ export function BillingClient({
                     "relative rounded-2xl shadow-sm transition-shadow hover:shadow-md",
                     plan.popular
                       ? "border-orange-300 ring-1 ring-orange-200"
-                      : "border-neutral-200",
+                      : "border-stone-200",
                   )}
                 >
                   <CardContent className="p-5">
@@ -216,12 +216,12 @@ export function BillingClient({
                         Popular
                       </Badge>
                     )}
-                    <p className="font-heading text-base font-bold text-neutral-900">
+                    <p className="font-display text-base font-bold text-stone-900">
                       {plan.name}
                     </p>
-                    <p className="mt-1 text-2xl font-bold text-neutral-900">
+                    <p className="mt-1 text-2xl font-bold text-stone-900">
                       ${plan.price}
-                      <span className="text-sm font-normal text-neutral-400">
+                      <span className="text-sm font-normal text-stone-400">
                         /mo
                       </span>
                     </p>
@@ -229,7 +229,7 @@ export function BillingClient({
                       {plan.features.map((feature) => (
                         <li
                           key={feature}
-                          className="flex items-center gap-2 text-xs text-neutral-600"
+                          className="flex items-center gap-2 text-xs text-stone-600"
                         >
                           <Check className="h-3 w-3 shrink-0 text-emerald-500" />
                           {feature}
@@ -241,7 +241,7 @@ export function BillingClient({
                         "mt-5 w-full rounded-xl text-sm font-medium",
                         plan.popular
                           ? "bg-orange-500 text-white hover:bg-orange-600"
-                          : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50",
+                          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
                       )}
                       variant={plan.popular ? "default" : "outline"}
                     >
@@ -254,10 +254,10 @@ export function BillingClient({
           </div>
 
           {/* Recent invoices */}
-          <Card className="rounded-2xl border-neutral-200 shadow-sm">
+          <Card className="rounded-2xl border-stone-200 shadow-sm">
             <CardContent className="p-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-heading text-sm font-semibold uppercase tracking-wider text-neutral-400">
+                <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-stone-400">
                   Recent Invoices
                 </h3>
                 <button className="flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-700">
@@ -265,17 +265,17 @@ export function BillingClient({
                 </button>
               </div>
               <Separator className="mb-2" />
-              <div className="divide-y divide-neutral-100">
+              <div className="divide-y divide-stone-100">
                 {invoices.map((inv, i) => (
                   <div
                     key={i}
                     className="flex items-center justify-between py-3.5"
                   >
                     <div>
-                      <p className="text-sm font-medium text-neutral-700">
+                      <p className="text-sm font-medium text-stone-700">
                         {inv.desc}
                       </p>
-                      <p className="mt-0.5 text-xs text-neutral-400">
+                      <p className="mt-0.5 text-xs text-stone-400">
                         {inv.date}
                       </p>
                     </div>
@@ -286,10 +286,10 @@ export function BillingClient({
                       >
                         {inv.status}
                       </Badge>
-                      <span className="text-sm font-semibold text-neutral-900">
+                      <span className="text-sm font-semibold text-stone-900">
                         {inv.amount}
                       </span>
-                      <button className="text-neutral-400 transition-colors hover:text-neutral-600">
+                      <button className="text-stone-400 transition-colors hover:text-stone-600">
                         <Receipt className="h-4 w-4" />
                       </button>
                     </div>

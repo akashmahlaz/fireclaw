@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Inter, Instrument_Serif, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -8,10 +8,11 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-heading",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-display",
   subsets: ["latin"],
-  weight: ["700", "800"],
+  weight: "400",
+  style: ["normal", "italic"],
 });
 
 const geistMono = Geist_Mono({
@@ -20,9 +21,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FireClaw - Managed AI Agents for Business Workflows",
+  title: "FireClaw — Deploy AI Agents",
   description:
-    "Deploy hosted AI agents with managed models, runtime, observability, and business workflow templates.",
+    "Deploy managed AI agents for your business. OpenClaw, Ad-Chain Verify, SEO Agent and more.",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -40,9 +41,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${instrumentSerif.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="min-h-full flex flex-col font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

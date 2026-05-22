@@ -40,7 +40,7 @@ interface AgentDetail {
 const statusColor = {
   running: "bg-emerald-500",
   provisioning: "bg-amber-500",
-  stopped: "bg-neutral-400",
+  stopped: "bg-stone-400",
   error: "bg-red-500",
 }
 
@@ -128,14 +128,14 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
           {/* Back */}
           <Link
             href="/dashboard/agents"
-            className="mb-6 inline-flex items-center gap-2 text-[13px] font-medium text-neutral-500 hover:text-neutral-700"
+            className="mb-6 inline-flex items-center gap-2 text-[13px] font-medium text-stone-500 hover:text-stone-700"
           >
             <ArrowLeft className="size-3.5" />
             All Agents
           </Link>
 
           {/* Header card */}
-          <div className="relative mb-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6">
+          <div className="relative mb-6 overflow-hidden rounded-2xl border border-stone-200 bg-white p-6">
             {agent.status === "running" && (
               <BorderBeam size={150} borderWidth={2} colorFrom="#10b981" colorTo="#34d399" duration={10} />
             )}
@@ -145,19 +145,19 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-neutral-100">
-                  <Server className="size-5 text-neutral-600" />
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-stone-100">
+                  <Server className="size-5 text-stone-600" />
                 </div>
                 <div>
                   <div className="flex items-center gap-3">
-                    <h1 className="text-[22px] font-black tracking-[-0.02em] text-neutral-900">
+                    <h1 className="text-[22px] font-black tracking-[-0.02em] text-stone-900">
                       {agent.name}
                     </h1>
                     <span className={cn(
                       "flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
                       agent.status === "running" && "bg-emerald-50 text-emerald-700",
                       agent.status === "provisioning" && "bg-amber-50 text-amber-700",
-                      agent.status === "stopped" && "bg-neutral-100 text-neutral-500",
+                      agent.status === "stopped" && "bg-stone-100 text-stone-500",
                       agent.status === "error" && "bg-red-50 text-red-600",
                     )}>
                       <span className={cn("size-1.5 rounded-full", statusColor[agent.status])} />
@@ -206,26 +206,26 @@ export function AgentDetailClient({ agent }: { agent: AgentDetail }) {
 
           {/* Server details */}
           {agent.serverIp && (
-            <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-5">
-              <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wider text-neutral-400">
+            <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-5">
+              <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wider text-stone-400">
                 Server Details
               </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <p className="text-[11px] text-neutral-400">IP Address</p>
-                  <p className="font-mono text-[13px] text-neutral-900">{agent.serverIp}</p>
+                  <p className="text-[11px] text-stone-400">IP Address</p>
+                  <p className="font-mono text-[13px] text-stone-900">{agent.serverIp}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-neutral-400">Server ID</p>
-                  <p className="font-mono text-[13px] text-neutral-900">{agent.serverId}</p>
+                  <p className="text-[11px] text-stone-400">Server ID</p>
+                  <p className="font-mono text-[13px] text-stone-900">{agent.serverId}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Actions */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-wider text-neutral-400">
+          <div className="rounded-2xl border border-stone-200 bg-white p-5">
+            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-wider text-stone-400">
               Server Actions
             </h3>
             <div className="flex flex-wrap gap-3">
@@ -276,12 +276,12 @@ function InfoCard({
   value: string
 }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-      <div className="mb-2 flex size-8 items-center justify-center rounded-lg bg-neutral-50">
-        <Icon className="size-3.5 text-neutral-400" />
+    <div className="rounded-2xl border border-stone-200 bg-white p-4">
+      <div className="mb-2 flex size-8 items-center justify-center rounded-lg bg-stone-50">
+        <Icon className="size-3.5 text-stone-400" />
       </div>
-      <p className="text-[11px] text-neutral-400">{label}</p>
-      <p className="text-[14px] font-bold text-neutral-900">{value}</p>
+      <p className="text-[11px] text-stone-400">{label}</p>
+      <p className="text-[14px] font-bold text-stone-900">{value}</p>
     </div>
   )
 }
@@ -307,8 +307,8 @@ function ActionButton({
       disabled={disabled || loading}
       className={cn(
         "flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed",
-        variant === "primary" && "bg-neutral-900 text-white hover:bg-neutral-700",
-        variant === "secondary" && "border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50",
+        variant === "primary" && "bg-stone-900 text-white hover:bg-stone-700",
+        variant === "secondary" && "border border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
         variant === "danger" && "bg-red-50 text-red-600 hover:bg-red-100",
       )}
     >

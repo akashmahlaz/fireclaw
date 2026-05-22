@@ -172,23 +172,23 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
             <div className="flex size-16 items-center justify-center rounded-2xl bg-emerald-100">
               <CheckCircle2 className="size-8 text-emerald-600" />
             </div>
-            <h1 className="text-[24px] font-black tracking-[-0.03em] text-neutral-900">
+            <h1 className="text-[24px] font-black tracking-[-0.03em] text-stone-900">
               You&apos;re all set!
             </h1>
-            <p className="max-w-sm text-[14px] text-neutral-500">
-              Your <span className="font-semibold text-neutral-900">{selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}</span> plan is now active.
+            <p className="max-w-sm text-[14px] text-stone-500">
+              Your <span className="font-semibold text-stone-900">{selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}</span> plan is now active.
               You can deploy agents from your dashboard.
             </p>
             <div className="mt-4 flex gap-3">
               <button
                 onClick={() => router.push("/dashboard/deploy")}
-                className="rounded-full bg-neutral-900 px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-neutral-700"
+                className="rounded-full bg-stone-900 px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-stone-700"
               >
                 Deploy Agent
               </button>
               <button
                 onClick={() => router.push("/dashboard")}
-                className="rounded-full border border-neutral-200 bg-white px-6 py-2.5 text-[13px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="rounded-full border border-stone-200 bg-white px-6 py-2.5 text-[13px] font-semibold text-stone-700 hover:bg-stone-50"
               >
                 Dashboard
               </button>
@@ -206,7 +206,7 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
           {/* Back button */}
           <button
             onClick={() => router.back()}
-            className="mb-6 flex items-center gap-2 text-[13px] font-medium text-neutral-500 hover:text-neutral-700"
+            className="mb-6 flex items-center gap-2 text-[13px] font-medium text-stone-500 hover:text-stone-700"
           >
             <ArrowLeft className="size-3.5" />
             Back
@@ -214,10 +214,10 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
 
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-[28px] font-black tracking-[-0.03em] text-neutral-900">
+            <h1 className="text-[28px] font-black tracking-[-0.03em] text-stone-900">
               Choose your plan
             </h1>
-            <p className="mt-1 text-[14px] text-neutral-500">
+            <p className="mt-1 text-[14px] text-stone-500">
               {subData?.subscription
                 ? `You're currently on the ${subData.subscription.tier} plan. Select a new plan to switch.`
                 : "Select a plan to start deploying AI agents."}
@@ -233,8 +233,8 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
                 className={cn(
                   "relative overflow-hidden rounded-2xl border-2 p-6 text-left transition-all",
                   selectedTier === plan.id
-                    ? "border-neutral-900 bg-white shadow-lg"
-                    : "border-neutral-200 bg-white hover:border-neutral-300",
+                    ? "border-stone-900 bg-white shadow-lg"
+                    : "border-stone-200 bg-white hover:border-stone-300",
                 )}
               >
                 {selectedTier === plan.id && (
@@ -246,11 +246,11 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
                   </span>
                 )}
 
-                <h3 className="text-[18px] font-bold text-neutral-900">{plan.label}</h3>
-                <p className="mt-1 text-[13px] text-neutral-500">{plan.desc}</p>
+                <h3 className="text-[18px] font-bold text-stone-900">{plan.label}</h3>
+                <p className="mt-1 text-[13px] text-stone-500">{plan.desc}</p>
 
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-[11px] font-medium text-neutral-400">
+                  <span className="text-[11px] font-medium text-stone-400">
                     {plan.agentLimit === 100 ? "Unlimited" : plan.agentLimit} agent{plan.agentLimit > 1 ? "s" : ""}
                   </span>
                 </div>
@@ -266,14 +266,14 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
           </div>
 
           {/* Checkout section */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+          <div className="rounded-2xl border border-stone-200 bg-white p-6">
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-neutral-100">
-                <CreditCard className="size-5 text-neutral-600" />
+              <div className="flex size-10 items-center justify-center rounded-xl bg-stone-100">
+                <CreditCard className="size-5 text-stone-600" />
               </div>
               <div>
-                <h2 className="text-[15px] font-bold text-neutral-900">Payment</h2>
-                <p className="text-[12px] text-neutral-500">
+                <h2 className="text-[15px] font-bold text-stone-900">Payment</h2>
+                <p className="text-[12px] text-stone-500">
                   Secure checkout via Razorpay
                 </p>
               </div>
@@ -281,11 +281,11 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
 
             {/* Trust badges */}
             <div className="mb-6 flex flex-wrap gap-4">
-              <div className="flex items-center gap-2 text-[12px] text-neutral-500">
+              <div className="flex items-center gap-2 text-[12px] text-stone-500">
                 <Shield className="size-3.5 text-emerald-500" />
                 256-bit SSL encryption
               </div>
-              <div className="flex items-center gap-2 text-[12px] text-neutral-500">
+              <div className="flex items-center gap-2 text-[12px] text-stone-500">
                 <Zap className="size-3.5 text-orange-500" />
                 Instant activation
               </div>
@@ -302,7 +302,7 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
               disabled={paying || (subData?.subscription?.tier === selectedTier)}
               className={cn(
                 "flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-[14px] font-semibold transition-all",
-                "bg-neutral-900 text-white hover:bg-neutral-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
+                "bg-stone-900 text-white hover:bg-stone-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
               )}
             >
               {paying ? (
@@ -319,7 +319,7 @@ export function CheckoutClient({ user }: CheckoutClientProps) {
               )}
             </button>
 
-            <p className="mt-3 text-center text-[11px] text-neutral-400">
+            <p className="mt-3 text-center text-[11px] text-stone-400">
               Pay per deploy. Your agent VPS costs are charged separately at deploy time.
             </p>
           </div>

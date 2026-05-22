@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -38,7 +38,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAgent } from "@/hooks/use-queries";
 
-/* ─── Types & Helpers ──────────────────────────────────────────────────────── */
+/* --- Types & Helpers -------------------------------------------------------- */
 
 interface ProvisionLogEntry {
   step: string;
@@ -86,7 +86,7 @@ function friendlyStep(raw: string): string {
   return raw;
 }
 
-/* ─── Constants ────────────────────────────────────────────────────────────── */
+/* --- Constants -------------------------------------------------------------- */
 
 const deployableTemplates = AGENT_TEMPLATES.filter(
   (t) => t.status !== "custom-setup",
@@ -112,12 +112,12 @@ const PLAN_COLORS: Record<string, string> = {
   starter: "text-sky-600 bg-sky-50 border-sky-200",
   growth: "text-violet-600 bg-violet-50 border-violet-200",
   agency: "text-orange-600 bg-orange-50 border-orange-200",
-  custom: "text-neutral-600 bg-neutral-50 border-neutral-200",
+  custom: "text-stone-600 bg-stone-50 border-stone-200",
 };
 
 const WIZARD_STEPS = ["Agent", "Plan", "Name", "Deploy"];
 
-/* ─── Main Component ───────────────────────────────────────────────────────── */
+/* --- Main Component --------------------------------------------------------- */
 
 export function DeployWizardClient() {
   const router = useRouter();
@@ -249,7 +249,7 @@ export function DeployWizardClient() {
     );
   })();
 
-  /* ─── Render ───────────────────────────────────────────────────────────────── */
+  /* --- Render ----------------------------------------------------------------- */
 
   return (
     <div className="relative min-h-full p-6 lg:p-10">
@@ -260,10 +260,10 @@ export function DeployWizardClient() {
             <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-orange-100">
               <Rocket className="size-5 text-orange-600" />
             </div>
-            <h1 className="font-heading text-[30px] font-black tracking-[-0.03em] text-neutral-900">
+            <h1 className="font-display text-[30px] font-black tracking-[-0.03em] text-stone-900">
               Agent Marketplace
             </h1>
-            <p className="mt-1.5 text-[14px] text-neutral-500">
+            <p className="mt-1.5 text-[14px] text-stone-500">
               Choose an AI agent, pick your plan, and deploy in minutes.
             </p>
           </div>
@@ -277,8 +277,8 @@ export function DeployWizardClient() {
                     className={cn(
                       "flex size-7 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-300",
                       index < step && "bg-emerald-500 text-white",
-                      index === step && "bg-neutral-900 text-white shadow-md",
-                      index > step && "bg-neutral-100 text-neutral-400",
+                      index === step && "bg-stone-900 text-white shadow-md",
+                      index > step && "bg-stone-100 text-stone-400",
                     )}
                   >
                     {index < step ? (
@@ -290,7 +290,7 @@ export function DeployWizardClient() {
                   <span
                     className={cn(
                       "hidden text-[12px] font-medium transition-colors sm:block",
-                      index === step ? "text-neutral-900" : "text-neutral-400",
+                      index === step ? "text-stone-900" : "text-stone-400",
                     )}
                   >
                     {label}
@@ -300,7 +300,7 @@ export function DeployWizardClient() {
                   <div
                     className={cn(
                       "h-px w-8 transition-colors duration-300",
-                      index < step ? "bg-emerald-400" : "bg-neutral-200",
+                      index < step ? "bg-emerald-400" : "bg-stone-200",
                     )}
                   />
                 )}
@@ -308,14 +308,14 @@ export function DeployWizardClient() {
             ))}
           </div>
 
-          {/* ─── Step 0: Choose Your Agent ─────────────────────────────────────── */}
+          {/* --- Step 0: Choose Your Agent --------------------------------------- */}
           {step === 0 && (
             <BlurFade inView delay={0.05}>
               <div className="mb-6">
-                <h2 className="font-heading text-[22px] font-bold text-neutral-900">
+                <h2 className="font-display text-[22px] font-bold text-stone-900">
                   Choose Your Agent
                 </h2>
-                <p className="mt-1 text-[13px] text-neutral-500">
+                <p className="mt-1 text-[13px] text-stone-500">
                   Select an AI agent to deploy. Each one is purpose-built and
                   ready to work.
                 </p>
@@ -332,7 +332,7 @@ export function DeployWizardClient() {
                     <TabsTrigger
                       key={cat}
                       value={cat}
-                      className="rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[12px] font-medium text-neutral-600 transition-all data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900 data-[state=active]:text-white"
+                      className="rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-[12px] font-medium text-stone-600 transition-all data-[state=active]:border-stone-900 data-[state=active]:bg-stone-900 data-[state=active]:text-white"
                     >
                       {cat}
                     </TabsTrigger>
@@ -359,14 +359,14 @@ export function DeployWizardClient() {
             </BlurFade>
           )}
 
-          {/* ─── Step 1: Choose Plan ──────────────────────────────────────────── */}
+          {/* --- Step 1: Choose Plan -------------------------------------------- */}
           {step === 1 && (
             <BlurFade inView delay={0.05}>
               <div className="mb-8">
-                <h2 className="font-heading text-[22px] font-bold text-neutral-900">
+                <h2 className="font-display text-[22px] font-bold text-stone-900">
                   Choose Your Plan
                 </h2>
-                <p className="mt-1 text-[13px] text-neutral-500">
+                <p className="mt-1 text-[13px] text-stone-500">
                   Plans control how many agents you can run and what
                   infrastructure backs them.
                 </p>
@@ -398,10 +398,10 @@ export function DeployWizardClient() {
                       className={cn(
                         "group relative flex flex-col overflow-hidden rounded-2xl border p-6 text-left transition-all duration-200 disabled:cursor-not-allowed",
                         isSelected
-                          ? "border-neutral-900 bg-white shadow-lg ring-1 ring-neutral-900/5"
+                          ? "border-stone-900 bg-white shadow-lg ring-1 ring-stone-900/5"
                           : allowed
-                            ? "border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-md"
-                            : "border-neutral-100 bg-neutral-50 opacity-50",
+                            ? "border-stone-200 bg-white hover:border-stone-400 hover:shadow-md"
+                            : "border-stone-100 bg-stone-50 opacity-50",
                       )}
                     >
                       {isSelected && (
@@ -429,7 +429,7 @@ export function DeployWizardClient() {
                       )}
 
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-[17px] font-bold text-neutral-900">
+                        <h3 className="text-[17px] font-bold text-stone-900">
                           {plan.name}
                         </h3>
                         {isSelected && (
@@ -438,19 +438,19 @@ export function DeployWizardClient() {
                       </div>
 
                       <div className="mt-3 flex items-baseline gap-1">
-                        <span className="text-[34px] font-black tracking-[-0.04em] text-neutral-900">
+                        <span className="text-[34px] font-black tracking-[-0.04em] text-stone-900">
                           {plan.price}
                         </span>
-                        <span className="text-[12px] font-medium text-neutral-400">
+                        <span className="text-[12px] font-medium text-stone-400">
                           {plan.period}
                         </span>
                       </div>
 
-                      <p className="mt-2 text-[12px] leading-relaxed text-neutral-500">
+                      <p className="mt-2 text-[12px] leading-relaxed text-stone-500">
                         {plan.description}
                       </p>
 
-                      <div className="mt-4 rounded-xl bg-neutral-50 px-3 py-2.5 text-[12px] font-semibold text-neutral-700">
+                      <div className="mt-4 rounded-xl bg-stone-50 px-3 py-2.5 text-[12px] font-semibold text-stone-700">
                         {plan.agentLimit} deployed agent
                         {plan.agentLimit > 1 ? "s" : ""}
                       </div>
@@ -461,7 +461,7 @@ export function DeployWizardClient() {
                         {plan.features.map((feature) => (
                           <li
                             key={feature}
-                            className="flex items-start gap-2 text-[12px] text-neutral-600"
+                            className="flex items-start gap-2 text-[12px] text-stone-600"
                           >
                             <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
                             {feature}
@@ -475,8 +475,8 @@ export function DeployWizardClient() {
                             className={cn(
                               "flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-semibold transition-all",
                               isSelected
-                                ? "bg-neutral-900 text-white"
-                                : "bg-neutral-100 text-neutral-700 group-hover:bg-orange-500 group-hover:text-white",
+                                ? "bg-stone-900 text-white"
+                                : "bg-stone-100 text-stone-700 group-hover:bg-orange-500 group-hover:text-white",
                             )}
                           >
                             {isSelected ? "Selected" : "Choose plan"}
@@ -491,15 +491,15 @@ export function DeployWizardClient() {
             </BlurFade>
           )}
 
-          {/* ─── Step 2: Name Your Agent ──────────────────────────────────────── */}
+          {/* --- Step 2: Name Your Agent ---------------------------------------- */}
           {step === 2 && (
             <BlurFade inView delay={0.05}>
               <div className="mx-auto max-w-xl space-y-6">
                 <div className="text-center">
-                  <h2 className="font-heading text-[22px] font-bold text-neutral-900">
+                  <h2 className="font-display text-[22px] font-bold text-stone-900">
                     Name Your Agent
                   </h2>
-                  <p className="mt-1 text-[13px] text-neutral-500">
+                  <p className="mt-1 text-[13px] text-stone-500">
                     Give it a name you will recognise in your dashboard.
                   </p>
                 </div>
@@ -507,7 +507,7 @@ export function DeployWizardClient() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="agent-name"
-                    className="text-[13px] font-semibold text-neutral-700"
+                    className="text-[13px] font-semibold text-stone-700"
                   >
                     Agent name
                   </Label>
@@ -517,12 +517,12 @@ export function DeployWizardClient() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder={`${selectedTemplate?.name ?? "My"} Agent`}
                     autoFocus
-                    className="h-12 rounded-xl border-neutral-200 text-[15px]"
+                    className="h-12 rounded-xl border-stone-200 text-[15px]"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && canNext()) goNext();
                     }}
                   />
-                  <p className="text-[11px] text-neutral-400">
+                  <p className="text-[11px] text-stone-400">
                     Only visible to you inside your dashboard.
                   </p>
                 </div>
@@ -539,36 +539,36 @@ export function DeployWizardClient() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-4 px-5 py-4 text-[13px]">
                     <div className="space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-stone-400">
                         Agent
                       </p>
-                      <p className="font-semibold text-neutral-900">
+                      <p className="font-semibold text-stone-900">
                         {selectedTemplate?.icon} {selectedTemplate?.name}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-stone-400">
                         Plan
                       </p>
-                      <p className="font-semibold text-neutral-900">
-                        {selectedPlan.name} — {selectedPlan.price}
+                      <p className="font-semibold text-stone-900">
+                        {selectedPlan.name}  {selectedPlan.price}
                         {selectedPlan.period}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-stone-400">
                         Region
                       </p>
-                      <p className="font-semibold text-neutral-900">
+                      <p className="font-semibold text-stone-900">
                         Auto-selected (lowest latency)
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-stone-400">
                         Setup time
                       </p>
-                      <p className="font-semibold text-neutral-900">
-                        ~3–5 minutes
+                      <p className="font-semibold text-stone-900">
+                        ~35 minutes
                       </p>
                     </div>
                   </CardContent>
@@ -577,24 +577,24 @@ export function DeployWizardClient() {
             </BlurFade>
           )}
 
-          {/* ─── Step 3: Deploying / Deployed ─────────────────────────────────── */}
+          {/* --- Step 3: Deploying / Deployed ----------------------------------- */}
           {step === 3 && (
             <BlurFade inView delay={0.05}>
               <div className="mx-auto max-w-xl space-y-6">
                 {/* In-progress */}
                 {!deployed && !deployError && (
                   <Card className="overflow-hidden rounded-2xl shadow-sm">
-                    <CardHeader className="border-b border-neutral-100 bg-neutral-50 px-5 py-4">
+                    <CardHeader className="border-b border-stone-100 bg-stone-50 px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex size-10 items-center justify-center rounded-full bg-violet-100">
                           <Bot className="size-5 text-violet-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-neutral-900">
+                          <p className="truncate text-sm font-semibold text-stone-900">
                             {name}
                           </p>
-                          <p className="text-xs text-neutral-500">
-                            {selectedTemplate?.name} · {selectedPlan.name}
+                          <p className="text-xs text-stone-500">
+                            {selectedTemplate?.name}  {selectedPlan.name}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
@@ -603,7 +603,7 @@ export function DeployWizardClient() {
                         </div>
                       </div>
                       <div className="mt-4 space-y-1.5">
-                        <div className="flex justify-between text-[11px] text-neutral-500">
+                        <div className="flex justify-between text-[11px] text-stone-500">
                           <span>Progress</span>
                           <span>{provisionProgress}%</span>
                         </div>
@@ -611,12 +611,12 @@ export function DeployWizardClient() {
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <div className="divide-y divide-neutral-100">
+                      <div className="divide-y divide-stone-100">
                         {provisionLog.length === 0 ? (
                           <div className="flex items-center gap-3 px-5 py-4">
-                            <Loader2 className="size-4 shrink-0 animate-spin text-neutral-400" />
-                            <span className="text-sm text-neutral-500">
-                              Getting things ready…
+                            <Loader2 className="size-4 shrink-0 animate-spin text-stone-400" />
+                            <span className="text-sm text-stone-500">
+                              Getting things ready
                             </span>
                           </div>
                         ) : (
@@ -637,9 +637,9 @@ export function DeployWizardClient() {
                               <span
                                 className={cn(
                                   "text-sm",
-                                  entry.status === "ok" && "text-neutral-600",
+                                  entry.status === "ok" && "text-stone-600",
                                   entry.status === "pending" &&
-                                    "font-medium text-neutral-900",
+                                    "font-medium text-stone-900",
                                   entry.status === "error" && "text-red-700",
                                 )}
                               >
@@ -650,9 +650,9 @@ export function DeployWizardClient() {
                         )}
                       </div>
                     </CardContent>
-                    <div className="border-t border-neutral-100 bg-neutral-50 px-5 py-3">
-                      <p className="text-xs text-neutral-400">
-                        Usually takes 3–5 minutes. Safe to close — we will email
+                    <div className="border-t border-stone-100 bg-stone-50 px-5 py-3">
+                      <p className="text-xs text-stone-400">
+                        Usually takes 35 minutes. Safe to close  we will email
                         you when it is ready.
                       </p>
                     </div>
@@ -684,13 +684,13 @@ export function DeployWizardClient() {
                 {deployed && (
                   <div className="flex flex-col items-center gap-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
                     <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 text-4xl">
-                      {selectedTemplate?.icon ?? "🤖"}
+                      {selectedTemplate?.icon ?? "??"}
                     </div>
                     <div>
-                      <p className="font-heading text-lg font-bold text-neutral-900">
-                        {name} is live! 🎉
+                      <p className="font-display text-lg font-bold text-stone-900">
+                        {name} is live! ??
                       </p>
-                      <p className="mt-1 text-sm text-neutral-500">
+                      <p className="mt-1 text-sm text-stone-500">
                         Your {selectedTemplate?.name} is running and ready to
                         work.
                       </p>
@@ -701,7 +701,7 @@ export function DeployWizardClient() {
                           href={`https://${agentDomain}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-sm ring-1 ring-neutral-200 hover:bg-neutral-50"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-200 hover:bg-stone-50"
                         >
                           Open agent
                           <ExternalLink className="size-3.5" />
@@ -727,13 +727,13 @@ export function DeployWizardClient() {
             </BlurFade>
           )}
 
-          {/* ─── Navigation Footer ────────────────────────────────────────────── */}
+          {/* --- Navigation Footer ---------------------------------------------- */}
           {step > 0 && step < 3 && (
-            <div className="mt-10 flex items-center justify-between border-t border-neutral-100 pt-6">
+            <div className="mt-10 flex items-center justify-between border-t border-stone-100 pt-6">
               <Button
                 variant="ghost"
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
-                className="gap-2 text-neutral-600"
+                className="gap-2 text-stone-600"
               >
                 <ArrowLeft className="size-3.5" />
                 Back
@@ -758,7 +758,7 @@ export function DeployWizardClient() {
 
 export default DeployWizardClient;
 
-/* ─── Agent Card Component ─────────────────────────────────────────────────── */
+/* --- Agent Card Component --------------------------------------------------- */
 
 function AgentCard({
   template,
@@ -785,11 +785,11 @@ function AgentCard({
           "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-white text-left transition-all duration-200",
           isDeployable &&
             selected &&
-            "border-neutral-900 shadow-lg ring-1 ring-neutral-900/5",
+            "border-stone-900 shadow-lg ring-1 ring-stone-900/5",
           isDeployable &&
             !selected &&
-            "border-neutral-200 hover:border-neutral-400 hover:shadow-md hover:-translate-y-0.5",
-          !isDeployable && "cursor-default border-neutral-100 opacity-60",
+            "border-stone-200 hover:border-stone-400 hover:shadow-md hover:-translate-y-0.5",
+          !isDeployable && "cursor-default border-stone-100 opacity-60",
         )}
       >
         {/* Coming Soon overlay */}
@@ -797,7 +797,7 @@ function AgentCard({
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
             <Badge
               variant="secondary"
-              className="rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-semibold text-white"
+              className="rounded-full bg-stone-900 px-3 py-1 text-[11px] font-semibold text-white"
             >
               Coming Soon
             </Badge>
@@ -820,7 +820,7 @@ function AgentCard({
         >
           {/* Top row: Icon + Badges */}
           <div className="mb-4 flex items-start justify-between gap-2">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-neutral-100 text-2xl transition-transform group-hover:scale-105">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-stone-100 text-2xl transition-transform group-hover:scale-105">
               {template.icon}
             </div>
             <div className="flex flex-col items-end gap-1.5">
@@ -835,7 +835,7 @@ function AgentCard({
                   className={cn(
                     "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
                     PLAN_COLORS[minPlan.id] ??
-                      "text-neutral-600 bg-neutral-50 border-neutral-200",
+                      "text-stone-600 bg-stone-50 border-stone-200",
                   )}
                 >
                   {minPlan.name}+
@@ -845,10 +845,10 @@ function AgentCard({
           </div>
 
           {/* Name + Description */}
-          <h3 className="text-[15px] font-bold text-neutral-900">
+          <h3 className="text-[15px] font-bold text-stone-900">
             {template.name}
           </h3>
-          <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-neutral-500">
+          <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-stone-500">
             {template.description}
           </p>
 
@@ -858,7 +858,7 @@ function AgentCard({
               {template.capabilities.slice(0, 3).map((cap) => (
                 <li
                   key={cap}
-                  className="flex items-start gap-2 text-[11px] text-neutral-600"
+                  className="flex items-start gap-2 text-[11px] text-stone-600"
                 >
                   <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-emerald-500" />
                   <span className="line-clamp-1">{cap}</span>
@@ -868,10 +868,10 @@ function AgentCard({
           )}
 
           {/* Footer */}
-          <div className="mt-auto flex items-center justify-between border-t border-neutral-100 pt-3">
+          <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
             {isDeployable ? (
               <>
-                <span className="text-[11px] font-medium text-neutral-400">
+                <span className="text-[11px] font-medium text-stone-400">
                   Managed AI included
                 </span>
                 <span
@@ -885,7 +885,7 @@ function AgentCard({
                 </span>
               </>
             ) : (
-              <span className="text-[11px] font-medium text-neutral-400">
+              <span className="text-[11px] font-medium text-stone-400">
                 Notify me when ready
               </span>
             )}
