@@ -11,7 +11,7 @@ import { NextRequest } from "next/server";
 
 // Keep this function alive for up to 800 s after the response is sent
 // so the background provision + health-check (≤10 min) always completes.
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 async function chooseCostEffectiveLocation(tier: string): Promise<string> {
   const fallback = "fsn1";

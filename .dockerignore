@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lockb
+
+# Testing
+coverage
+.nyc_output
+
+# Next.js
+.next/
+out/
+dist
+build
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env*.local
+.env.production
+
+# Vercel
+.vercel
+
+# Typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# Documentation & Non-essential
+README.md
+PLAN.md
+ROADMAP.md
+RESEARCH.md
+TECH_ARCHITECTURE.md
+COMPETITORS.md
+HOW_HOSTINGER_WORKS.md
+AGENTS.md
+CLAUDE.md
+*.md
+
+# Patch files
+*.patch
+
+# OpenClaw submodule (if not needed in container)
+openclaw/
