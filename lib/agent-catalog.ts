@@ -12,6 +12,7 @@ export type AgentTemplateId =
   | "finance-analyst"
   | "code-reviewer"
   | "legal-assistant"
+  | "adtech-crawler"
   | "custom-agent";
 
 export type PlanId = "starter" | "growth" | "agency" | "custom";
@@ -349,6 +350,27 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     requiredSecrets: [],
     healthCheck: "/healthz",
     status: "coming-soon",
+  },
+  {
+    {
+    id: "adtech-crawler",
+    name: "AdTech Supply Chain Verifier",
+    icon: "📡",
+    category: "Ad Operations",
+    description: "Crawls ads.txt, app-ads.txt, and sellers.json files for large lists of apps and websites to verify programmatic advertising supply chains.",
+    capabilities: [
+      "Processes Android apps, iOS apps, and websites in bulk",
+      "Fetches and parses ads.txt / app-ads.txt files",
+      "Verifies supply chain via sellers.json cross-referencing",
+      "Spawns parallel sub-agents for 5,000+ entry batches",
+      "Outputs structured Excel-ready compliance reports",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "growth",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "Agent responds to 'process next batch' command",
+    status: "deployable",
   },
   {
     id: "custom-agent",

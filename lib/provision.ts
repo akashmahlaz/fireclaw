@@ -22,6 +22,7 @@ function buildCloudInit(opts: {
   minimaxApiKey?: string;
   ghcrToken?: string;
   systemPrompt?: string;
+  workspaceFiles?: Record<string, string>; // filename → content, written to /root/.openclaw/workspace/
 }): string {
   const openclawImage = process.env.OPENCLAW_DOCKER_IMAGE || "ghcr.io/akashmahlaz/openclaw:fireclaw-latest";
 
@@ -197,9 +198,22 @@ report "🐳 Docker CE + Compose installed" "ok"
 mkdir -p /opt/openclaw
 cd /opt/openclaw
 
-# ── Create persistent state directories ─────────────────────────────
+# ── Create persistent state directories ───────────────────────────────────────────────
 mkdir -p /root/.openclaw/workspace
+mkdir -p /root/.openclaw/workspace/memory
 chown -R 1000:1000 /root/.openclaw
+
+${opts.workspaceFiles && Object.keys(opts.workspaceFiles).length > 0
+  ? Object.entries(opts.workspaceFiles).map(([filename, content]) => {
+      // Use a unique heredoc delimiter per file to avoid conflicts
+      const delim = `WSEOF_${filename.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
+      return `# ── Workspace file: ${filename} ──
+cat > /root/.openclaw/workspace/${filename} << '${delim}'
+${content}
+${delim}
+chown 1000:1000 /root/.openclaw/workspace/${filename}`;
+    }).join('\n\n')
+  : '# No extra workspace files'}
 
 # ── Write initial OpenClaw config ───────────────────────────────────
 cat > /root/.openclaw/openclaw.json << 'CONFIGEOF'
@@ -361,6 +375,53 @@ function loadSystemPrompt(templateId: string | undefined, agentName?: string): s
   }
 }
 
+/**
+ * Load workspace files from config/agents/<templateId>/ directory.
+ * Returns a Record<filename, content> for all .md files found.
+ * Always includes AGENTS.md base template.
+ */
+function loadWorkspaceFiles(templateId: string | undefined, agentName: string): Record<string, string> {
+  const files: Record<string, string> = {};
+
+  // Base AGENTS.md for all agents
+  const baseAgentsTemplate = `# AGENTS.md - Your Workspace
+
+## Every Session
+1. Read SOUL.md — this is who you are
+2. Read USER.md — this is who you're helping
+3. Read memory/ files for recent context
+
+## Memory
+- Daily notes: memory/YYYY-MM-DD.md
+- Long-term: MEMORY.md
+
+## Safety
+- Don't run destructive commands without confirming
+- Save progress to memory/ files after every batch
+`;
+  files["AGENTS.md"] = baseAgentsTemplate;
+
+  if (!templateId) return files;
+
+  // Load any extra workspace files from config/agents/<templateId>/
+  try {
+    const dirPath = join(process.cwd(), "config", "agents", templateId);
+    const { readdirSync } = require("fs");
+    const entries = readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.endsWith(".md")) {
+        let content = readFileSync(join(dirPath, entry.name), "utf-8").trim();
+        content = content.replaceAll("{{BUSINESS_NAME}}", agentName);
+        files[entry.name] = content;
+      }
+    }
+  } catch {
+    // No extra workspace files directory — that's fine
+  }
+
+  return files;
+}
+
 export async function provisionAgent(opts: {
   agentId: string;
   userId: string;
@@ -426,6 +487,7 @@ export async function provisionAgent(opts: {
     minimaxApiKey: process.env.MINIMAX_API_KEY || process.env.MINIMAX_CODE_PLAN_KEY || undefined,
     ghcrToken: process.env.GHCR_TOKEN || undefined,
     systemPrompt: loadSystemPrompt(opts.templateId, opts.name),
+    workspaceFiles: loadWorkspaceFiles(opts.templateId, opts.name),
   });
   console.log(`[provision] Agent ${opts.agentId}: cloud-init script generated (${userData.length} bytes)`);
 
