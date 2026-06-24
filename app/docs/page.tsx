@@ -114,7 +114,7 @@ export default function Docs() {
                 3
               </span>
               Go to{" "}
-              <Link href="/dashboard/deploy" className="font-medium text-white underline underline-offset-2">
+              <Link href="/dashboard/marketplace" className="font-medium text-white underline underline-offset-2">
                 Deploy
               </Link>
               , name your agent, and click Deploy — done!

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Bot,
+  Store,
   Rocket,
   CreditCard,
   Settings,
@@ -13,20 +14,46 @@ import {
   Flame,
   Menu,
   X,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useSyncPlanStore } from "@/hooks/use-sync-plan";
+import { useUserPlan } from "@/lib/store";
 
 /* ── Navigation ── */
-const navItems = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Agents", href: "/dashboard/agents", icon: Bot },
-  { label: "Marketplace", href: "/dashboard/deploy", icon: Rocket },
-  { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+const navSections: {
+  label: string;
+  items: { label: string; href: string; icon: typeof LayoutDashboard }[];
+}[] = [
+  {
+    label: "Workspace",
+    items: [
+      { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+      { label: "My Agents", href: "/dashboard/agents", icon: Bot },
+    ],
+  },
+  {
+    label: "Discover",
+    items: [
+      { label: "Marketplace", href: "/dashboard/marketplace", icon: Store },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
+      { label: "Settings", href: "/dashboard/settings", icon: Settings },
+    ],
+  },
 ];
+
+const SIDEBAR_EXPANDED_WIDTH = 240;
+const SIDEBAR_COLLAPSED_WIDTH = 68;
+const STORAGE_KEY = "fireclaw-sidebar-collapsed";
 
 /* ── Props ── */
 interface DashboardShellProps {
@@ -38,6 +65,25 @@ interface DashboardShellProps {
 export function DashboardShell({ user, children }: DashboardShellProps) {
   useSyncPlanStore();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
+
+  // Hydrate collapsed state from localStorage
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === "true") setCollapsed(true);
+    } catch {}
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const initials = user.name
     ? user.name
@@ -50,14 +96,16 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--background)]">
-      {/* Desktop Rail */}
-      <DesktopRail
+      {/* Desktop Sidebar */}
+      <DesktopSidebar
         user={{
           name: user.name ?? "User",
           email: user.email ?? "",
           image: user.image ?? "",
           initials,
         }}
+        collapsed={collapsed}
+        onToggle={toggleCollapsed}
       />
 
       {/* Mobile overlay */}
@@ -95,74 +143,220 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   );
 }
 
-/* ── Desktop Rail (68px) ── */
-function DesktopRail({
+/* ── Desktop Sidebar ── */
+function DesktopSidebar({
   user,
+  collapsed,
+  onToggle,
 }: {
   user: { name: string; email: string; image: string; initials: string };
+  collapsed: boolean;
+  onToggle: () => void;
 }) {
   const pathname = usePathname();
+  const { tier } = useUserPlan();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
 
-  return (
-    <nav className="hidden md:flex w-[68px] flex-col items-center border-r border-[var(--border)] bg-white py-5 gap-1">
-      {/* Brand */}
-      <Link
-        href="/dashboard"
-        className="mb-6 flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-sm transition-transform hover:scale-105"
-        title="FireClaw"
-      >
-        <Flame className="size-5 text-white" />
-      </Link>
+  const planLabel = tier
+    ? tier.charAt(0).toUpperCase() + tier.slice(1)
+    : "Free";
 
-      {/* Nav icons */}
-      <div className="flex flex-1 flex-col items-center gap-1">
-        {navItems.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={cn(
-                "flex size-10 items-center justify-center rounded-xl transition-all duration-150",
-                active
-                  ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm"
-                  : "text-stone-400 hover:text-stone-700 hover:bg-stone-100",
+  return (
+    <nav
+      className="hidden md:flex flex-col border-r border-stone-200/80 bg-white relative select-none"
+      style={{
+        width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH,
+        minWidth: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH,
+        transition:
+          "width 200ms cubic-bezier(0.4, 0, 0.2, 1), min-width 200ms cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
+    >
+      {/* Brand */}
+      <div
+        className={cn(
+          "flex items-center border-b border-stone-100 shrink-0",
+          collapsed ? "justify-center px-0 py-5" : "px-5 py-5",
+        )}
+      >
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2.5 group"
+          title="FireClaw"
+        >
+          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-sm transition-transform group-hover:scale-105">
+            <Flame className="size-[18px] text-white" />
+          </div>
+          {!collapsed && (
+            <span className="text-[15px] font-bold text-stone-900 tracking-tight">
+              FireClaw
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {/* Navigation */}
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto py-4",
+          collapsed ? "px-2" : "px-3",
+        )}
+      >
+        <div className="flex flex-col gap-5">
+          {navSections.map((section) => (
+            <div key={section.label} className="flex flex-col gap-0.5">
+              {!collapsed && (
+                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-stone-400">
+                  {section.label}
+                </p>
               )}
+              {section.items.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      "group relative flex items-center rounded-xl transition-all duration-150",
+                      collapsed
+                        ? "justify-center size-10 mx-auto"
+                        : "gap-3 px-3 py-2.5",
+                      active
+                        ? "bg-stone-900 text-white shadow-sm"
+                        : "text-stone-500 hover:text-stone-900 hover:bg-stone-50",
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-orange-500" />
+                    )}
+                    <item.icon
+                      className="size-[18px] shrink-0"
+                      strokeWidth={active ? 2.2 : 1.8}
+                    />
+                    {!collapsed && (
+                      <span className="text-[13px] font-medium truncate">
+                        {item.label}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Deploy CTA */}
+        <div className={cn("mt-6", collapsed ? "px-0" : "px-0")}>
+          {collapsed ? (
+            <Link
+              href="/dashboard/marketplace"
+              title="Deploy Agent"
+              className="flex size-10 mx-auto items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95"
             >
-              <item.icon
-                className="size-[18px]"
-                strokeWidth={active ? 2.2 : 1.8}
-              />
+              <Rocket className="size-[18px]" />
             </Link>
-          );
-        })}
+          ) : (
+            <Link
+              href="/dashboard/marketplace"
+              className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]"
+            >
+              <Rocket className="size-4" />
+              Deploy Agent
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Bottom section */}
-      <div className="flex flex-col items-center gap-2 mt-auto">
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          title="Sign out"
-          className="flex size-10 items-center justify-center rounded-xl text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
-        >
-          <LogOut className="size-[18px]" strokeWidth={1.8} />
-        </button>
+      <div className="mt-auto border-t border-stone-100 shrink-0">
+        {/* Plan badge + User */}
+        <div className={cn("py-3", collapsed ? "px-2" : "px-3")}>
+          {/* Plan pill */}
+          {collapsed ? (
+            <div className="flex justify-center mb-2">
+              <div
+                className="flex size-7 items-center justify-center rounded-lg bg-orange-50"
+                title={`${planLabel} Plan`}
+              >
+                <Sparkles className="size-3.5 text-orange-500" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <div className="flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1">
+                <Sparkles className="size-3 text-orange-500" />
+                <span className="text-[11px] font-semibold text-orange-600">
+                  {planLabel}
+                </span>
+              </div>
+            </div>
+          )}
 
-        <Link href="/dashboard/settings" title={user.name}>
-          <Avatar className="size-9 ring-2 ring-stone-100 transition-all hover:ring-orange-200">
-            <AvatarImage src={user.image} alt={user.name} />
-            <AvatarFallback className="bg-stone-100 text-[11px] font-semibold text-stone-600">
-              {user.initials}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
+          {/* User row */}
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <Link href="/dashboard/settings" title={user.name}>
+                <Avatar className="size-9 ring-2 ring-stone-100 transition-all hover:ring-orange-200">
+                  <AvatarImage src={user.image} alt={user.name} />
+                  <AvatarFallback className="bg-stone-100 text-[11px] font-semibold text-stone-600">
+                    {user.initials}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                title="Sign out"
+                className="flex size-9 items-center justify-center rounded-xl text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
+              >
+                <LogOut className="size-4" strokeWidth={1.8} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 px-1 mb-2">
+                <Avatar className="size-9 ring-2 ring-stone-100 shrink-0">
+                  <AvatarImage src={user.image} alt={user.name} />
+                  <AvatarFallback className="bg-stone-100 text-[11px] font-semibold text-stone-600">
+                    {user.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-[13px] font-semibold text-stone-900 leading-tight">
+                    {user.name}
+                  </p>
+                  <p className="truncate text-[11px] text-stone-400 leading-tight mt-0.5">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-[12px] font-medium text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
+              >
+                <LogOut className="size-4" strokeWidth={1.8} />
+                Sign out
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Collapse toggle button */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-20 z-10 flex size-6 items-center justify-center rounded-full border border-stone-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-stone-300 active:scale-90"
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? (
+          <ChevronRight className="size-3 text-stone-500" />
+        ) : (
+          <ChevronLeft className="size-3 text-stone-500" />
+        )}
+      </button>
     </nav>
   );
 }
@@ -180,14 +374,15 @@ function TopBar({
   const getTitle = () => {
     if (pathname === "/dashboard") return "Overview";
     if (pathname.startsWith("/dashboard/agents")) return "Agents";
-    if (pathname.startsWith("/dashboard/deploy")) return "Marketplace";
+    if (pathname.startsWith("/dashboard/marketplace")) return "Marketplace";
+    if (pathname.startsWith("/dashboard/deploy")) return "Deploy";
     if (pathname.startsWith("/dashboard/billing")) return "Billing";
     if (pathname.startsWith("/dashboard/settings")) return "Settings";
     return "Dashboard";
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border)] bg-white/80 backdrop-blur-md px-5 lg:px-8">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-stone-200/80 bg-white/80 backdrop-blur-md px-5 lg:px-8">
       <div className="flex items-center gap-3">
         {/* Mobile menu */}
         <button
@@ -214,7 +409,7 @@ function TopBar({
       {/* Right */}
       <div className="flex items-center gap-3">
         <Link
-          href="/dashboard/deploy"
+          href="/dashboard/marketplace"
           className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-4 py-1.5 text-[12px] font-semibold text-white transition-all hover:bg-stone-700 active:scale-[0.97]"
         >
           <Rocket className="size-3" />
@@ -243,14 +438,19 @@ function MobileNav({
   onClose: () => void;
 }) {
   const pathname = usePathname();
+  const { tier } = useUserPlan();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
 
+  const planLabel = tier
+    ? tier.charAt(0).toUpperCase() + tier.slice(1)
+    : "Free";
+
   return (
-    <div className="relative z-10 flex h-full w-72 flex-col bg-white shadow-2xl">
+    <div className="relative z-10 flex h-full w-72 flex-col bg-white shadow-2xl animate-in slide-in-from-left duration-200">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
         <div className="flex items-center gap-2.5">
@@ -269,31 +469,63 @@ function MobileNav({
 
       {/* Nav */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="flex flex-col gap-0.5">
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14px] font-medium transition-colors",
-                  active
-                    ? "bg-stone-900 text-white"
-                    : "text-stone-600 hover:bg-stone-50 hover:text-stone-900",
-                )}
-              >
-                <item.icon className="size-[18px]" strokeWidth={1.8} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <div className="flex flex-col gap-5">
+          {navSections.map((section) => (
+            <div key={section.label} className="flex flex-col gap-0.5">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-stone-400">
+                {section.label}
+              </p>
+              {section.items.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14px] font-medium transition-colors",
+                      active
+                        ? "bg-stone-900 text-white"
+                        : "text-stone-600 hover:bg-stone-50 hover:text-stone-900",
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-orange-500" />
+                    )}
+                    <item.icon className="size-[18px]" strokeWidth={1.8} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Deploy CTA */}
+        <div className="mt-5">
+          <Link
+            href="/dashboard/marketplace"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+          >
+            <Rocket className="size-4" />
+            Deploy Agent
+          </Link>
         </div>
       </div>
 
       {/* Footer */}
       <div className="border-t border-stone-100 px-4 py-4">
+        {/* Plan pill */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1">
+            <Sparkles className="size-3 text-orange-500" />
+            <span className="text-[11px] font-semibold text-orange-600">
+              {planLabel} Plan
+            </span>
+          </div>
+        </div>
+
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="size-9 ring-1 ring-stone-200">
             <AvatarImage src={user.image} alt={user.name} />

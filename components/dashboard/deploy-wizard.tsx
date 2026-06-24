@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -121,14 +121,26 @@ const WIZARD_STEPS = ["Agent", "Plan", "Name", "Deploy"];
 
 export function DeployWizardClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const confettiRef = useRef<ConfettiRef>(null);
 
+  // Preselect from ?template= (sent by marketplace agent page)
+  const preselectedTemplate = (() => {
+    const fromQuery = searchParams.get("template");
+    if (!fromQuery) return null;
+    const match = deployableTemplates.find(
+      (t) => t.id === fromQuery && t.status === "deployable",
+    );
+    return match?.id ?? null;
+  })();
+
   // Wizard state
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(preselectedTemplate ? 1 : 0);
   const [templateId, setTemplateId] = useState(
-    deployableTemplates.find((t) => t.status === "deployable")?.id ??
-      "customer-support",
+    preselectedTemplate ??
+      deployableTemplates.find((t) => t.status === "deployable")?.id ??
+      "openclaw",
   );
   const [planId, setPlanId] = useState("starter");
   const [name, setName] = useState("");

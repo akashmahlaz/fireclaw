@@ -1,4 +1,7 @@
 export type AgentTemplateId =
+  | "openclaw"
+  | "ad-chain-verify"
+  | "seo-agent"
   | "customer-support"
   | "research-analyst"
   | "content-studio"
@@ -6,26 +9,43 @@ export type AgentTemplateId =
   | "market-trends"
   | "shopping-assistant"
   | "business-analyst"
-  | "seo-agent"
   | "sales-outreach"
   | "hr-screener"
   | "finance-analyst"
   | "code-reviewer"
   | "legal-assistant"
-  | "adtech-crawler"
   | "custom-agent";
 
 export type PlanId = "starter" | "growth" | "agency" | "custom";
 export type InfrastructureTier = "starter" | "standard" | "pro" | "enterprise";
 export type AgentTemplateStatus = "deployable" | "coming-soon" | "custom-setup";
 
+export interface AgentPricingTier {
+  label: string;
+  price: string;
+  period: string;
+  includes: string;
+  highlighted?: boolean;
+}
+
 export interface AgentTemplate {
   id: AgentTemplateId;
   name: string;
+  /** Short marketing line shown on marketplace cards and detail page hero. */
+  tagline: string;
+  /** Emoji fallback; only used if logoUrl is missing. */
   icon: string;
+  /** Path under /public for the agent’s square brand mark (svg/png). */
+  logoUrl?: string;
+  /** Path under /public for a wider preview image on the detail hero. */
+  imageUrl?: string;
+  /** Marks a hero/priority agent (OpenClaw, Ad-Chain Verify, SEO). */
+  featured?: boolean;
   category: string;
   description: string;
   capabilities: string[];
+  /** Optional display-only pricing tiers (used by AdTech-style agents). */
+  pricingTiers?: AgentPricingTier[];
   runtime: "openclaw" | "managed-custom";
   minimumPlan: PlanId;
   defaultModelProvider: "minimax";
@@ -116,9 +136,114 @@ export const FIRECLAW_PLANS: FireclawPlan[] = [
 ];
 
 export const AGENT_TEMPLATES: AgentTemplate[] = [
+  // ── Priority 1: OpenClaw (general-purpose, Fireclaw's modified build) ──
+  {
+    id: "openclaw",
+    name: "OpenClaw",
+    tagline: "Your own personal AI assistant. Any OS. Any platform.",
+    icon: "🦞",
+    logoUrl: "/agents/openclaw-logo.svg",
+    imageUrl: "/hero1.png",
+    featured: true,
+    category: "General",
+    description:
+      "Fireclaw's managed deployment of the open-source OpenClaw assistant — a typed, local-first workflow shell that turns skills and tools into composable pipelines. Runs as a dedicated agent on your own subdomain with HTTPS, monitoring, and one-click upgrades.",
+    capabilities: [
+      "General-purpose chat, research, and task execution",
+      "Composable skills + tool calling via the OpenClaw plugin API",
+      "Runs on a dedicated server with HTTPS, DNS, and health checks",
+      "Your own subdomain on fireclaw.ai (custom domain on Agency+)",
+      "One-click upgrades to the latest OpenClaw release",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "starter",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "deployable",
+  },
+  // ── Priority 2: Ad-Chain Verify (ad-tech, paid client lined up) ──
+  {
+    id: "ad-chain-verify",
+    name: "Ad-Chain Verify",
+    tagline:
+      "Programmatic ad supply-chain verification, on autopilot.",
+    icon: "📶",
+    logoUrl: "/agents/ad-chain-verify-mark.svg",
+    imageUrl: "/meta-ads-agent.png",
+    featured: true,
+    category: "AdTech",
+    description:
+      "An OpenClaw build tuned for ad operations teams. Crawls ads.txt, app-ads.txt, and sellers.json at scale, cross-references reseller relationships, and ships proof-first compliance reports for every campaign you run.",
+    capabilities: [
+      "Processes Android apps, iOS apps, and websites in bulk batches",
+      "Fetches and parses ads.txt / app-ads.txt with retry + caching",
+      "Verifies supply path via sellers.json cross-referencing",
+      "Spawns parallel sub-agents for 5,000+ entry runs",
+      "Outputs structured Excel/CSV compliance reports + JSON evidence",
+      "Scheduled re-checks with diff alerts when ad inventory changes",
+    ],
+    pricingTiers: [
+      {
+        label: "Starter",
+        price: "$49",
+        period: "/mo",
+        includes: "Up to 500 verified pages · daily schedule",
+      },
+      {
+        label: "Growth",
+        price: "$99",
+        period: "/mo",
+        includes: "1,500 verified pages · GEO routing · priority support",
+        highlighted: true,
+      },
+      {
+        label: "Scale",
+        price: "$199",
+        period: "/mo",
+        includes: "5,000 verified pages · multi-GEO · diff alerts",
+      },
+    ],
+    runtime: "openclaw",
+    minimumPlan: "growth",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "Agent responds to 'process next batch' command",
+    status: "deployable",
+  },
+  // ── Priority 3: SEO Agent ──
+  {
+    id: "seo-agent",
+    name: "SEO Agent",
+    tagline:
+      "Connect your site. Get audits, fixes, and backlinks — on a schedule.",
+    icon: "🔍",
+    logoUrl: "/agents/seo-agent-mark.svg",
+    imageUrl: "/seo-agent.png",
+    featured: true,
+    category: "Marketing",
+    description:
+      "An OpenClaw build with site-connect capabilities: it crawls your pages, runs technical + on-page audits, surfaces ranking gaps against competitors, and runs auto backlink campaigns from your dashboard.",
+    capabilities: [
+      "Site connect via sitemap or GSC — full technical SEO audit",
+      "On-page audits: title, meta, headings, internal links, schema",
+      "Keyword gap analysis against top-ranking competitors",
+      "Auto backlink outreach campaigns with reply tracking",
+      "Content briefs for target queries with intent + entities",
+      "Scheduled re-audits with weekly progress digests",
+    ],
+    runtime: "openclaw",
+    minimumPlan: "growth",
+    defaultModelProvider: "minimax",
+    requiredSecrets: [],
+    healthCheck: "/healthz",
+    status: "deployable",
+  },
+  // ── Other Fireclaw agents (coming soon until priority three are live) ──
   {
     id: "customer-support",
     name: "Customer Support",
+    tagline: "24/7 frontline support agent that answers, triages, and escalates.",
     icon: "🎧",
     category: "Support",
     description: "Answers FAQs, triages tickets, and escalates unresolved customer issues 24/7.",
@@ -132,11 +257,12 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
   {
     id: "content-studio",
     name: "Content Studio",
+    tagline: "Briefs in, finished drafts out — across blog, social, and email.",
     icon: "✍️",
     category: "Content",
     description: "Drafts blogs, social posts, newsletters, and campaign copy from a short brief.",
@@ -150,11 +276,12 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
   {
     id: "shopping-assistant",
     name: "Shopping Assistant",
+    tagline: "Turns browsers into buyers with product comparisons and guided checkout.",
     icon: "🛍️",
     category: "Commerce",
     description: "Compares products, explains tradeoffs, and guides buyers to confident decisions.",
@@ -168,29 +295,12 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
-  },
-  {
-    id: "seo-agent",
-    name: "SEO Agent",
-    icon: "🔍",
-    category: "Marketing",
-    description: "Audits your pages, surfaces ranking gaps, and delivers fixes that move you up search results.",
-    capabilities: [
-      "On-page audits: title, meta, headings, internal links",
-      "Keyword gap analysis against top-ranking competitors",
-      "Actionable content briefs for target queries",
-    ],
-    runtime: "openclaw",
-    minimumPlan: "growth",
-    defaultModelProvider: "minimax",
-    requiredSecrets: [],
-    healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
   {
     id: "research-analyst",
     name: "Research Analyst",
+    tagline: "Web research turned into structured briefs your team can act on.",
     icon: "🔬",
     category: "Research",
     description: "Finds credible sources, compares claims, and turns raw research into structured briefs your team can act on.",
@@ -204,11 +314,12 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
   {
     id: "market-trends",
     name: "Market Trends",
+    tagline: "Weekly trend digests pulled from news, social, and competitors.",
     icon: "📈",
     category: "Marketing",
     description: "Monitors industry topics, summarises key shifts, and produces weekly trend reports you can forward to clients.",
@@ -222,11 +333,12 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
   {
     id: "document-intake",
     name: "Document Intake",
+    tagline: "PDFs in, structured data out — piped straight into your stack.",
     icon: "📄",
     category: "Operations",
     description: "Reads uploaded PDFs and docs, extracts key data, and routes summaries to the right place automatically.",
@@ -240,11 +352,12 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
   {
     id: "business-analyst",
     name: "Business Analyst",
+    tagline: "Ask questions of your data — get charts, tables, and answers.",
     icon: "📊",
     category: "Analytics",
     description: "Connects to your data, runs analysis on demand, and delivers decision-ready reports and dashboards.",
@@ -258,12 +371,13 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     defaultModelProvider: "minimax",
     requiredSecrets: [],
     healthCheck: "/healthz",
-    status: "deployable",
+    status: "coming-soon",
   },
-  // ── Coming Soon ──────────────────────────────────────────────────────────────
+  // ── Coming Soon ──────────────────────────────────────────────────────────────────────────
   {
     id: "sales-outreach",
     name: "Sales Outreach",
+    tagline: "From cold prospect to booked meeting — fully personalised.",
     icon: "💼",
     category: "Sales",
     description: "Researches prospects, writes personalised outreach sequences, and books meetings on your calendar automatically.",
@@ -282,6 +396,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "hr-screener",
     name: "HR Screener",
+    tagline: "Score applicants against your spec and auto-schedule interviews.",
     icon: "👥",
     category: "Operations",
     description: "Screens job applications, scores candidates against your criteria, and schedules interviews automatically.",
@@ -300,6 +415,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "finance-analyst",
     name: "Finance Analyst",
+    tagline: "Reads your books, spots risk, forecasts cash — every month.",
     icon: "💰",
     category: "Analytics",
     description: "Reads your P&L, cash flow, and invoices — then surfaces the insights that actually move the needle.",
@@ -318,6 +434,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "code-reviewer",
     name: "Code Reviewer",
+    tagline: "PR reviews in seconds — bugs, security, and refactor suggestions.",
     icon: "💻",
     category: "Engineering",
     description: "Reviews pull requests, catches bugs, suggests improvements, and explains changes in plain English.",
@@ -336,6 +453,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "legal-assistant",
     name: "Legal Assistant",
+    tagline: "Contract review and plain-English answers — without the legal fees.",
     icon: "⚖️",
     category: "Operations",
     description: "Reviews contracts, flags risky clauses, and answers legal questions in plain language — not legal fees.",
@@ -352,28 +470,9 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     status: "coming-soon",
   },
   {
-    id: "adtech-crawler",
-    name: "AdTech Supply Chain Verifier",
-    icon: "📡",
-    category: "Ad Operations",
-    description: "Crawls ads.txt, app-ads.txt, and sellers.json files for large lists of apps and websites to verify programmatic advertising supply chains.",
-    capabilities: [
-      "Processes Android apps, iOS apps, and websites in bulk",
-      "Fetches and parses ads.txt / app-ads.txt files",
-      "Verifies supply chain via sellers.json cross-referencing",
-      "Spawns parallel sub-agents for 5,000+ entry batches",
-      "Outputs structured Excel-ready compliance reports",
-    ],
-    runtime: "openclaw",
-    minimumPlan: "growth",
-    defaultModelProvider: "minimax",
-    requiredSecrets: [],
-    healthCheck: "Agent responds to 'process next batch' command",
-    status: "deployable",
-  },
-  {
     id: "custom-agent",
     name: "Custom Agent",
+    tagline: "A founder-led build around your exact workflow and integrations.",
     icon: "⚙️",
     category: "Custom",
     description: "A founder-led build for your specific workflow, data sources, channels, and integrations.",

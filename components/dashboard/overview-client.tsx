@@ -207,7 +207,7 @@ function EmptyState() {
         dedicated infrastructure with HTTPS and monitoring included.
       </p>
       <Link
-        href="/dashboard/deploy"
+        href="/dashboard/marketplace"
         className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-6 py-2.5 text-[13px] font-semibold text-white transition-all hover:bg-stone-700 active:scale-[0.97]"
       >
         <Rocket className="size-3.5" />

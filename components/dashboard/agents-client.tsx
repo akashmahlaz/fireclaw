@@ -49,7 +49,7 @@ export function AgentsClient({ agents }: { agents: AgentRow[] }) {
             {agents.length} agent{agents.length !== 1 ? "s" : ""}
           </h1>
           <Link
-            href="/dashboard/deploy"
+            href="/dashboard/marketplace"
             className="inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-5 py-2 text-[12px] font-semibold text-white transition-all hover:bg-stone-700 active:scale-[0.97]"
           >
             <Rocket className="size-3" />
@@ -88,7 +88,7 @@ export function AgentsClient({ agents }: { agents: AgentRow[] }) {
           </p>
           {!search && (
             <Link
-              href="/dashboard/deploy"
+              href="/dashboard/marketplace"
               className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-4 py-2 text-[12px] font-semibold text-white hover:bg-stone-700"
             >
               <Rocket className="size-3" />
